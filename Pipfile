@@ -4,15 +4,19 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "~=5.2.3"  # web framework
+django = "~=5.2.3"              # web framework
+djangorestframework = "~=3.16.0"  # REST batteries
 
 [dev-packages]
 # linter, formater, types checker
 flake8="~=7.3.0"    # code quality
 black="~=25.1.0"    # formatter
 isort="~=6.0.1"     # sorting imports
-mypy="~=1.16.1"     # types checking
+mypy="~=1.15.0"     # types checking
 ipdb="~=0.13.13"    # debbuger
+# stubs packages
+django-stubs = { version="~=5.2.1", extras=["compatible-mypy"]}
+djangorestframework-stubs = { version="~=3.16.0", extras=["compatible-mypy"]}
 
 [requires]
 python_version = "3.13"
