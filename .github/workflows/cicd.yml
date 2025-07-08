@@ -3,7 +3,7 @@ name: Code quality check
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 
 on:
-  - push
+  - push:
     - branches:
       -main
 
