@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "d5442b7ad5e75a78027cb1d6ad62a9e089c42f0a85370fa02e39c0f9c886ef45"
+            "sha256": "14de3a831b06f0e23f5a9d0b15bc8671552b4eed983032d8cb3f1cdc1976b191"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -41,6 +41,23 @@
             "index": "pypi",
             "markers": "python_version >= '3.9'",
             "version": "==3.16.0"
+        },
+        "djangorestframework-simplejwt": {
+            "hashes": [
+                "sha256:474a1b737067e6462b3609627a392d13a4da8a08b1f0574104ac6d7b1406f90e",
+                "sha256:4ef6b38af20cdde4a4a51d1fd8e063cbbabb7b45f149cc885d38d905c5a62edb"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.9'",
+            "version": "==5.5.0"
+        },
+        "pyjwt": {
+            "hashes": [
+                "sha256:3b02fb0f44517787776cf48f2ae25d8e14f300e6d7545a4315cee571a415e850",
+                "sha256:7e1e5b56cc735432a7369cbfa0efe50fa113ebecdc04ae6922deba8b84582d0c"
+            ],
+            "markers": "python_version >= '3.8'",
+            "version": "==2.9.0"
         },
         "sqlparse": {
             "hashes": [
@@ -107,11 +124,11 @@
         },
         "certifi": {
             "hashes": [
-                "sha256:2e0c7ce7cb5d8f8634ca55d2ba7e6ec2689a2fd6537d8dec1296a477a4910057",
-                "sha256:d747aa5a8b9bbbb1bb8c22bb13e22bd1f18e9796defa16bab421f7f7a317323b"
+                "sha256:c1d2ec05395148ee10cf672ffc28cd37ea0ab0d99f9cc74c43e588cbd111b079",
+                "sha256:d842783a14f8fdd646895ac26f719a061408834473cfc10203f6a575beb15d39"
             ],
             "markers": "python_version >= '3.7'",
-            "version": "==2025.6.15"
+            "version": "==2025.7.9"
         },
         "charset-normalizer": {
             "hashes": [
