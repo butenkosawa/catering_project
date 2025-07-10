@@ -16,7 +16,8 @@ class Role(StrEnum):
         results = []
 
         for item in cls:
-            _element: tuple[str, str] = (item.value, item.name.capitalize())
+            _element: tuple[str, str] = (item.value, item.name.lower().capitalize())
+            results.append(_element)
         
         return results
 
@@ -61,14 +62,16 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     email = models.EmailField(max_length=100, unique=True, null=False)
-    phone_number = models.CharField(max_length=10, unique=True, null=False)
+    phone_number = models.CharField(max_length=13, unique=True, null=False)
     first_name = models.CharField(max_length=30, null=False)
     last_name = models.CharField(max_length=50, null=False)
 
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
-    role = models.CharField(max_length=50, default=Role.CUSTOMER, choices=Role.choices())
+    role = models.CharField(
+        max_length=50, default=Role.CUSTOMER, choices=Role.choices()
+    )
 
     EMAIL_FIELD = "email"
     USERNAME_FIELD = "email"
