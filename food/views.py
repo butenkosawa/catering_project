@@ -47,6 +47,17 @@ from .models import Restaurant, Dish, Order, OrderItem, OrderStatus
 from users.models import Role, User
 
 
+class DishCreaterSerializer(serializers.ModelSerializer):
+    class Meta: # type: ignore
+        model = Dish
+        fields = "__all__"
+    
+    def validate_price(self, value: int):
+        if value < 1:
+            raise ValidationError("PRICE must be greater than 1 (in cents)")
+        return value
+
+
 class DishSerializer(serializers.ModelSerializer):
     class Meta: # type: ignore
         model = Dish
@@ -106,52 +117,73 @@ class IsAdmin(permissions.BasePermission):
 
 class FoodAPIViewSet(viewsets.GenericViewSet):
     def get_permissions(self):
-        
-        match self.action:
-            case "all_orders":
-                return[permissions.IsAuthenticated(), IsAdmin()]
-            case _:
-                return [permissions.IsAuthenticated()]
+        if self.action == "orders" and self.request.method == "GET":
+            return[permissions.IsAuthenticated(), IsAdmin()]
+        elif self.action == "dishes" and self.request.method == "POST":
+            return[permissions.IsAuthenticated(), IsAdmin()]
+        else:
+            return [permissions.IsAuthenticated()]
 
-
-    @action(methods=["get"], detail=False)
+    @action(methods=["get", "post"], detail=False)
     def dishes(self, request: Request) -> Response:
-        restaurants = Restaurant.objects.all()
-        serializer = RestaurantSerializer(restaurants, many=True)
-        return Response(data=serializer.data)
+        if request.method == "GET":
+            restaurants = Restaurant.objects.all()
+            serializer = RestaurantSerializer(restaurants, many=True)
+            return Response(data=serializer.data)
+        
+        elif request.method == "POST":
+            serializer = DishCreaterSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            dish = Dish.objects.create(
+                name=serializer.validated_data["name"],
+                price=serializer.validated_data["price"],
+                restaurant=serializer.validated_data["restaurant"]
+            )
+            print(f"New Dish is created: {dish.pk}: {dish.name} | {dish.price}")
+            return Response(DishSerializer(dish).data, status=201)
+        
+        return Response({"detail": f"Method {request.method} not allowed."}, status=405)
     
     # HTTP POST /food/orders/ {}
     #@transaction.atomic    <-- also available
-    @action(methods=["post"], detail=False, url_path=r"orders")
-    def create_order(self, request: Request) -> Response:
-        serializer = OrderSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    @action(methods=["get", "post"], detail=False)
+    def orders(self, request: Request) -> Response:
+        if request.method == "GET":
+            orders = Order.objects.all()
+            serializer = OrderSerializer(orders, many=True)
+            return Response(serializer.data)
+        
+        elif request.method ==  "POST":
+            serializer = OrderSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
 
-        with transaction.atomic():
-            order = Order.objects.create(
-                status=OrderStatus.NOT_STARTED,
-                user=request.user,
-                delivery_provider="uklon",
-                eta=serializer.validated_data["eta"],
-                total=serializer.calculated_total
-            )
-
-            items = serializer.validated_data["items"]
-
-            for dish_order in items:
-                # raise ValueError("Some Error Occured")
-                instance = OrderItem.objects.create(
-                    dish=dish_order["dish"],
-                    quantity=dish_order["quantity"],
-                    order=order
+            with transaction.atomic():
+                order = Order.objects.create(
+                    status=OrderStatus.NOT_STARTED,
+                    user=request.user,
+                    delivery_provider="uklon",
+                    eta=serializer.validated_data["eta"],
+                    total=serializer.calculated_total
                 )
-                print(f"New Dish Order Item is created: {instance.pk}")
-        
-        print(f"New Food Order is created: {order.pk}. ETA: {order.eta}")
+                items = serializer.validated_data["items"]
 
-        # TODO: Run Scheduler
+                for dish_order in items:
+                    # raise ValueError("Some Error Occured")
+                    instance = OrderItem.objects.create(
+                        dish=dish_order["dish"],
+                        quantity=dish_order["quantity"],
+                        order=order
+                    )
+                    print(f"New Dish Order Item is created: {instance.pk}")
+            
+            print(f"New Food Order is created: {order.pk}. ETA: {order.eta}")
+
+            # TODO: Run Scheduler
+            
+            return Response(OrderSerializer(order).data, status=201)
         
-        return Response(OrderSerializer(order).data, status=201)
+        return Response({"detail": f"Method {request.method} not allowed."}, status=405) 
         
     # HTTP GET /food/orders/4
     @action(methods=["get"], detail=False, url_path=r"orders/(?P<id>\d+)")
@@ -159,12 +191,6 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         order = Order.objects.get(id=id)
         serializer = OrderSerializer(order)
         return Response(data=serializer.data)
-    
-    @action(methods=["get"], detail=False, url_path=r"orders")
-    def all_orders(self, request: Request) -> Response:
-        orders = Order.objects.all()
-        serializer = OrderSerializer(orders, many=True)
-        return Response(serializer.data)
 
 
 router = routers.DefaultRouter()
