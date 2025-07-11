@@ -34,7 +34,12 @@ class UserSerialiser(serializers.ModelSerializer):
 
 class UsersAPIViewSet(viewsets.GenericViewSet):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [permissions.AllowAny()]
+        else:
+            return [permissions.IsAuthenticated()]
 
     def list(self, request: Request):
         return Response(UserSerialiser(request.user).data, status=200)
