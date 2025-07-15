@@ -1,3 +1,26 @@
+# Project Setup
+
+> Ensure that you have `pipenv` insatlled on your system.
+>
+> `pipx install pipenv`
+
+```shell
+pipenv shell  &&  pipenv sync
+
+# load test data into your database
+python manage.py loaddata fixtures/dump.json
+
+# dump database data to the JSON file
+python manage.py dumpdata --natural-primary --natural-foregin --indent 2> tmp/dump.json
+
+```
+
+<br>
+
+<br>
+
+---
+
 # IDEA
 
 - Users Management
@@ -114,16 +137,6 @@ Alternatives
   - SQLAlchemy (allows async)
 - Laravel, Express, Ruby on Rails, Spring Boot, Symphony
 
-# Project Setup
-
-> Ensure that you have `pipenv` insatlled on your system.
->
-> `pipx install pipenv`
-
-```shell
-
-pipenv shell  &&  pipenv sync
-```
 
 ## Basics about Web
 

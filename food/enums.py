@@ -17,7 +17,7 @@ class OrderStatus(enum.StrEnum):
     CANCELLED_BY_DRIVER = enum.auto()
     FAILED = enum.auto()
 
-    @ classmethod
+    @classmethod
     def choices(cls):
         """
         Pair example:
@@ -27,7 +27,15 @@ class OrderStatus(enum.StrEnum):
         results = []
 
         for element in cls:
-            _element = (element.value, element.name.replace("_", " ").lower().capitalize())
+            _element = (
+                element.value,
+                element.name.replace("_", " ").lower().capitalize(),
+            )
             results.append(_element)
-        
+
         return results
+
+
+class DeliveryProvider(enum.StrEnum):
+    UKLON = enum.auto()
+    UBER = enum.auto()
