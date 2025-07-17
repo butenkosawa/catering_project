@@ -54,6 +54,17 @@ from .models import Restaurant, Dish, Order, OrderItem, OrderStatus
 from users.models import Role, User
 
 
+class DishCreatorSerializer(serializers.ModelSerializer):
+    class Meta:  # type: ignore
+        model = Dish
+        fields = "__all__"
+
+    def validate_price(self, value: int):
+        if value < 1:
+            raise ValidationError("PRICE must be greater than 1 (in cents)")
+        return value
+
+
 class DishSerializer(serializers.ModelSerializer):
     class Meta:  # type: ignore
         model = Dish
@@ -174,51 +185,99 @@ class FoodFilters(BaseFilters):
 
 class FoodAPIViewSet(viewsets.GenericViewSet):
     def get_permissions(self):
+        if self.action == "orders" and self.request.method == "GET":
+            return [permissions.IsAuthenticated(), IsAdmin()]
+        elif self.action == "dishes" and self.request.method == "POST":
+            return [permissions.IsAuthenticated(), IsAdmin()]
+        else:
+            return [permissions.IsAuthenticated()]
 
-        match self.action:
-            case "all_orders":
-                return [permissions.IsAuthenticated(), IsAdmin()]
-            case _:
-                return [permissions.IsAuthenticated()]
-
-    @action(methods=["get"], detail=False)
+    @action(methods=["get", "post"], detail=False)
     def dishes(self, request: Request) -> Response:
-        restaurants = Restaurant.objects.all()
-        serializer = RestaurantSerializer(restaurants, many=True)
-        return Response(data=serializer.data)
+        if request.method == "GET":
+            restaurants = Restaurant.objects.all()
+            serializer = RestaurantSerializer(restaurants, many=True)
+            return Response(data=serializer.data)
+
+        elif request.method == "POST":
+            serializer = DishCreatorSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            dish = Dish.objects.create(
+                name=serializer.validated_data["name"],
+                price=serializer.validated_data["price"],
+                restaurant=serializer.validated_data["restaurant"],
+            )
+            print(f"New Dish is created: {dish.pk}: {dish.name} | {dish.price}")
+            return Response(DishSerializer(dish).data, status=201)
+
+        return Response({"detail": f"Method {request.method} not allowed."}, status=405)
 
     # HTTP POST /food/orders/ {}
     # @transaction.atomic    <-- also available
-    @action(methods=["post"], detail=False, url_path=r"orders")
-    def create_order(self, request: Request) -> Response:
-        serializer = OrderSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    @action(methods=["get", "post"], detail=False)
+    def orders(self, request: Request) -> Response:
+        if request.method == "GET":
+            # filters = FoodFilters(**request.query_params.dict())
+            # status: str | None = request.query_params.get("status")
+            # orders = (
+            #     Order.objects.all()
+            #     if filters.delivery_provider is None
+            #     else Order.objects.filter(delivery_provider=filters.delivery_provider)
+            # )
+            orders = Order.objects.all()
 
-        with transaction.atomic():
-            order = Order.objects.create(
-                status=OrderStatus.NOT_STARTED,
-                user=request.user,
-                delivery_provider="uklon",
-                eta=serializer.validated_data["eta"],
-                total=serializer.calculated_total,
-            )
+            # =====================
+            # PageNumberPagination
+            # =====================
+            paginator = PageNumberPagination()
+            paginator.page_size = 2
+            paginator.page_size_query_param = "size"
+            page = paginator.paginate_queryset(orders, request, view=self)
 
-            items = serializer.validated_data["items"]
+            # =====================
+            # LimitOffsetPagination
+            # =====================
+            # paginator = LimitOffsetPagination()
+            # page = paginator.paginate_queryset(orders, request, view=self)
 
-            for dish_order in items:
-                # raise ValueError("Some Error Occured")
-                instance = OrderItem.objects.create(
-                    dish=dish_order["dish"],
-                    quantity=dish_order["quantity"],
-                    order=order,
+            if page is not None:
+                serializer = OrderSerializer(page, many=True)
+                return paginator.get_paginated_response(serializer.data)
+
+            serializer = OrderSerializer(orders, many=True)
+            return Response(serializer.data)
+
+        elif request.method == "POST":
+            serializer = OrderSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            with transaction.atomic():
+                order = Order.objects.create(
+                    status=OrderStatus.NOT_STARTED,
+                    user=request.user,
+                    delivery_provider="uklon",
+                    eta=serializer.validated_data["eta"],
+                    total=serializer.calculated_total,
                 )
-                print(f"New Dish Order Item is created: {instance.pk}")
+                items = serializer.validated_data["items"]
 
-        print(f"New Food Order is created: {order.pk}. ETA: {order.eta}")
+                for dish_order in items:
+                    # raise ValueError("Some Error Occured")
+                    instance = OrderItem.objects.create(
+                        dish=dish_order["dish"],
+                        quantity=dish_order["quantity"],
+                        order=order,
+                    )
+                    print(f"New Dish Order Item is created: {instance.pk}")
 
-        # TODO: Run Scheduler
+            print(f"New Food Order is created: {order.pk}. ETA: {order.eta}")
 
-        return Response(OrderSerializer(order).data, status=201)
+            # TODO: Run Scheduler
+
+            return Response(OrderSerializer(order).data, status=201)
+
+        return Response({"detail": f"Method {request.method} not allowed."}, status=405)
 
     # HTTP GET /food/orders/4
     @action(methods=["get"], detail=False, url_path=r"orders/(?P<id>\d+)")
@@ -227,39 +286,7 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         serializer = OrderSerializer(order)
         return Response(data=serializer.data)
 
-    @action(methods=["get"], detail=False, url_path=r"orders")
-    def all_orders(self, request: Request) -> Response:
-        # filters = FoodFilters(**request.query_params.dict())
-        # status: str | None = request.query_params.get("status")
-        # orders = (
-        #     Order.objects.all()
-        #     if filters.delivery_provider is None
-        #     else Order.objects.filter(delivery_provider=filters.delivery_provider)
-        # )
-        orders = Order.objects.all()
-
-        # =====================
-        # PageNumberPagination
-        # =====================
-        # paginator = PageNumberPagination()
-        # paginator.page_size = 2
-        # paginator.page_size_query_param = "size"
-        # page = paginator.paginate_queryset(orders, request, view=self)
-
-        # =====================
-        # LimitOffsetPagination
-        # =====================
-        paginator = LimitOffsetPagination()
-        page = paginator.paginate_queryset(orders, request, view=self)
-
-        if page is not None:
-            serializer = OrderSerializer(page, many=True)
-            return paginator.get_paginated_response(serializer.data)
-
-        serializer = OrderSerializer(orders, many=True)
-        return Response(serializer.data)
-
-
+      
 def import_dishes(request):
     if request.method != "POST":
         raise ValueError(f"Method {request.method} is not allowed on this resource")
