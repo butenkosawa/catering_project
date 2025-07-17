@@ -286,7 +286,7 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         serializer = OrderSerializer(order)
         return Response(data=serializer.data)
 
-
+      
 def import_dishes(request):
     if request.method != "POST":
         raise ValueError(f"Method {request.method} is not allowed on this resource")
