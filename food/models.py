@@ -32,13 +32,13 @@ class Dish(models.Model):
 class Order(models.Model):
     class Meta:
         db_table = "orders"
-    
+
     status = models.CharField(
         max_length=50, choices=OrderStatus.choices(), default=OrderStatus.NOT_STARTED
     )
     delivery_provider = models.CharField(max_length=20, null=True, blank=True)
     eta = models.DateField()
-    total = models.PositiveIntegerField(null=True)
+    total = models.PositiveIntegerField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self) -> str:
@@ -48,7 +48,7 @@ class Order(models.Model):
 class OrderItem(models.Model):
     class Meta:
         db_table = "order_items"
-    
+
     quantity = models.SmallIntegerField()
     dish = models.ForeignKey("Dish", on_delete=models.CASCADE)
     order = models.ForeignKey("Order", on_delete=models.CASCADE, related_name="items")
