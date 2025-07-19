@@ -42,6 +42,8 @@ from datetime import date
 
 from django.db import transaction
 from django.shortcuts import redirect
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework import viewsets, serializers, routers, permissions
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -181,10 +183,13 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
             case _:
                 return [permissions.IsAuthenticated()]
 
+    @method_decorator(cache_page(30))
     @action(methods=["get"], detail=False)
     def dishes(self, request: Request) -> Response:
         restaurants = Restaurant.objects.all()
         serializer = RestaurantSerializer(restaurants, many=True)
+        # import time
+        # time.sleep(3)
         return Response(data=serializer.data)
 
     # HTTP POST /food/orders/ {}
@@ -206,7 +211,7 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
             items = serializer.validated_data["items"]
 
             for dish_order in items:
-                # raise ValueError("Some Error Occured")
+                # raise ValueError("Some Error Occurred")
                 instance = OrderItem.objects.create(
                     dish=dish_order["dish"],
                     quantity=dish_order["quantity"],

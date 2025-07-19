@@ -4,4 +4,4 @@ from .models import User
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    readonly_fields = ("id", "password", "last_login")
+    readonly_fields = ("id", "password", "last_login", "is_active")

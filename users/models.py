@@ -18,7 +18,7 @@ class Role(StrEnum):
         for item in cls:
             _element: tuple[str, str] = (item.value, item.name.lower().capitalize())
             results.append(_element)
-        
+
         return results
 
 
@@ -28,11 +28,12 @@ class UserManager(BaseUserManager):
 
         email = self.normalize_email(email)
         password = make_password(password)
-        
+
+        extra_fields["is_active"] = False
         extra_fields["is_staff"] = False
         extra_fields["is_superuser"] = False
         extra_fields["role"] = Role.CUSTOMER
-        
+
         # aka User(...)
         user = self.model(email=email, password=password, **extra_fields)
         user.save()
@@ -41,19 +42,20 @@ class UserManager(BaseUserManager):
 
     def create_superuser(self, email: str, password: str, **extra_fields):
         """Create and save a SUPERUSER with passed parameters"""
-        
+
         email = self.normalize_email(email)
         password = make_password(password)
-        
+
         extra_fields["is_staff"] = True
         extra_fields["is_superuser"] = True
         extra_fields["role"] = Role.ADMIN
-        
+
         # aka User(...)
         user = self.model(email=email, password=password, **extra_fields)
         user.save()
 
         return user
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
@@ -76,4 +78,3 @@ class User(AbstractBaseUser, PermissionsMixin):
     EMAIL_FIELD = "email"
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
-    

@@ -9,7 +9,7 @@ class Restaurant(models.Model):
         db_table = "restaurants"
 
     name = models.CharField(max_length=255, null=False)
-    adress = models.TextField(null=False)
+    address = models.TextField(null=False)
 
     def __str__(self) -> str:
         return self.name

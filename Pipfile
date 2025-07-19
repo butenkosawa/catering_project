@@ -7,15 +7,14 @@ name = "pypi"
 django = "~=5.2.3"              # web framework
 djangorestframework = "~=3.16.0"  # REST batteries
 djangorestframework-simplejwt = "~=5.5.0" # JWT Authentication
+redis = "~=6.2.0"  # Caching
 
 [dev-packages]
-# linter, formater, types checker
 flake8="~=7.3.0"    # code quality
 black="~=25.1.0"    # formatter
 isort="~=6.0.1"     # sorting imports
 mypy="~=1.15.0"     # types checking
 ipdb="~=0.13.13"    # debbuger
-# stubs packages
 django-stubs = { version="~=5.2.1", extras=["compatible-mypy"]}
 djangorestframework-stubs = { version="~=3.16.0", extras=["compatible-mypy"]}
 
