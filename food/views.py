@@ -160,7 +160,7 @@ class BaseFilters:
             except ValidationError as error:
                 errors["queryParams"][key] = str(error)
             else:
-                setattr(self, _key, extractor(_extracted_value))
+                setattr(self, _key, _extracted_value)
 
         if errors["queryParams"]:
             raise ValidationError(errors)
@@ -175,14 +175,60 @@ class FoodFilters(BaseFilters):
     ) -> DeliveryProvider | None:
         if provider is None:
             return None
-        else:
-            provider_name = provider.upper()
-            try:
-                _provider = DeliveryProvider[provider_name]
-            except KeyError:
-                raise ValidationError(f"Provider {provider} is not supported")
-            else:
-                return _provider
+        provider_name = provider.upper()
+        try:
+            return DeliveryProvider[provider_name]
+        except KeyError:
+            raise ValidationError(f"Provider {provider} is not supported")
+
+    def extract_status(self, status: str | None = None) -> OrderStatus | None:
+        if status is None:
+            return None
+        status_value = status.upper()
+        try:
+            return OrderStatus[status_value]
+        except KeyError:
+            raise ValidationError(f"Status {status} is not supported")
+
+    def extract_user_id(self, user_id: str | None = None) -> int | None:
+        if user_id is None:
+            return None
+        try:
+            return int(user_id)
+        except ValueError:
+            raise ValidationError("User ID must be a number")
+
+    def extract_min_total(self, min_total: str | None = None) -> int | None:
+        if min_total is None:
+            return None
+        try:
+            return int(min_total)
+        except ValueError:
+            raise ValidationError("Min total must be a number")
+
+    def extract_max_total(self, max_total: str | None = None) -> int | None:
+        if max_total is None:
+            return None
+        try:
+            return int(max_total)
+        except ValueError:
+            raise ValidationError("Max total must be a number")
+
+    def extract_eta_from(self, eta_from: str | None = None) -> date | None:
+        if eta_from is None:
+            return None
+        try:
+            return date.fromisoformat(eta_from)
+        except ValueError:
+            raise ValidationError("Date must be in `YYYY-MM-DD` format")
+
+    def extract_eta_to(self, eta_to: str | None = None) -> date | None:
+        if eta_to is None:
+            return None
+        try:
+            return date.fromisoformat(eta_to)
+        except ValueError:
+            raise ValidationError("Date must be in `YYYY-MM-DD` format")
 
 
 class FoodAPIViewSet(viewsets.GenericViewSet):
@@ -239,11 +285,27 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
     def orders(self, request: Request) -> Response:
         if request.method == "GET":
             filters = FoodFilters(**request.query_params.dict())
-            orders = (
-                Order.objects.all()
-                if filters.delivery_provider is None
-                else Order.objects.filter(delivery_provider=filters.delivery_provider)
-            )
+            orders = Order.objects.select_related("user").all()
+
+            filter_mapping = {
+                "delivery_provider": "delivery_provider",
+                "status": "status",
+                "user_id": "user_id",
+                "min_total": "total__gte",
+                "max_total": "total__lte",
+                "eta_from": "eta__gte",
+                "eta_to": "eta__lte",
+            }
+
+            filter_kwargs = {}
+            for filter_attr, django_filter in filter_mapping.items():
+                if hasattr(filters, filter_attr):
+                    value = getattr(filters, filter_attr)
+                    if value is not None:
+                        filter_kwargs[django_filter] = value
+
+            if filter_kwargs:
+                orders = orders.filter(**filter_kwargs)
 
             # =====================
             # PageNumberPagination
