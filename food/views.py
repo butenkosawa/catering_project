@@ -41,6 +41,7 @@ from typing import Any
 from datetime import date
 
 from django.db import transaction
+from django.db.models import Prefetch
 from django.shortcuts import redirect
 from rest_framework import viewsets, serializers, routers, permissions
 from rest_framework.request import Request
@@ -143,6 +144,8 @@ class BaseFilters:
 
         for key, value in kwargs.items():
             _key: str = self.camel_to_snake_case(key)
+            if _key in ("limit", "offset", "page", "size"):
+                continue
 
             try:
                 extractor = getattr(self, f"extract_{_key}")
@@ -177,13 +180,14 @@ class FoodFilters(BaseFilters):
             try:
                 _provider = DeliveryProvider[provider_name]
             except KeyError:
-
                 raise ValidationError(f"Provider {provider} is not supported")
             else:
                 return _provider
 
 
 class FoodAPIViewSet(viewsets.GenericViewSet):
+    pagination_class = LimitOffsetPagination
+
     def get_permissions(self):
         if self.action == "orders" and self.request.method == "GET":
             return [permissions.IsAuthenticated(), IsAdmin()]
@@ -195,7 +199,23 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
     @action(methods=["get", "post"], detail=False)
     def dishes(self, request: Request) -> Response:
         if request.method == "GET":
-            restaurants = Restaurant.objects.all()
+            dish_name = request.query_params.get("name")
+
+            if not dish_name:
+                restaurants = Restaurant.objects.all()
+            else:
+                restaurants = Restaurant.objects.prefetch_related(
+                    Prefetch(
+                        "dishes",
+                        queryset=Dish.objects.filter(name__icontains=dish_name),
+                    )
+                ).all()
+
+            page = self.paginate_queryset(restaurants)
+            if page is not None:
+                serializer = RestaurantSerializer(page, many=True)
+                return self.get_paginated_response(data=serializer.data)
+
             serializer = RestaurantSerializer(restaurants, many=True)
             return Response(data=serializer.data)
 
@@ -218,32 +238,29 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
     @action(methods=["get", "post"], detail=False)
     def orders(self, request: Request) -> Response:
         if request.method == "GET":
-            # filters = FoodFilters(**request.query_params.dict())
-            # status: str | None = request.query_params.get("status")
-            # orders = (
-            #     Order.objects.all()
-            #     if filters.delivery_provider is None
-            #     else Order.objects.filter(delivery_provider=filters.delivery_provider)
-            # )
-            orders = Order.objects.all()
+            filters = FoodFilters(**request.query_params.dict())
+            orders = (
+                Order.objects.all()
+                if filters.delivery_provider is None
+                else Order.objects.filter(delivery_provider=filters.delivery_provider)
+            )
 
             # =====================
             # PageNumberPagination
             # =====================
-            paginator = PageNumberPagination()
-            paginator.page_size = 2
-            paginator.page_size_query_param = "size"
-            page = paginator.paginate_queryset(orders, request, view=self)
+            # paginator = PageNumberPagination()
+            # paginator.page_size = 2
+            # paginator.page_size_query_param = "size"
+            # page = paginator.paginate_queryset(orders, request, view=self)
 
             # =====================
             # LimitOffsetPagination
             # =====================
-            # paginator = LimitOffsetPagination()
-            # page = paginator.paginate_queryset(orders, request, view=self)
+            page = self.paginate_queryset(orders)
 
             if page is not None:
                 serializer = OrderSerializer(page, many=True)
-                return paginator.get_paginated_response(serializer.data)
+                return self.get_paginated_response(serializer.data)
 
             serializer = OrderSerializer(orders, many=True)
             return Response(serializer.data)
@@ -263,7 +280,7 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
                 items = serializer.validated_data["items"]
 
                 for dish_order in items:
-                    # raise ValueError("Some Error Occured")
+                    # raise ValueError("Some Error Occurred")
                     instance = OrderItem.objects.create(
                         dish=dish_order["dish"],
                         quantity=dish_order["quantity"],
@@ -286,10 +303,14 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         serializer = OrderSerializer(order)
         return Response(data=serializer.data)
 
-      
+
 def import_dishes(request):
     if request.method != "POST":
-        raise ValueError(f"Method {request.method} is not allowed on this resource")
+        raise ValueError(f"Method `{request.method}` is not allowed on this resource")
+    elif request.user.role != Role.ADMIN:
+        raise ValueError(
+            f"User role `{request.user.role}` is not allowed on this resource"
+        )
 
     csv_file = request.FILES.get("file")
     if csv_file is None:
