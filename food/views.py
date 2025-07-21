@@ -43,6 +43,8 @@ from datetime import date
 from django.db import transaction
 from django.db.models import Prefetch
 from django.shortcuts import redirect
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework import viewsets, serializers, routers, permissions
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -245,25 +247,9 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
     @action(methods=["get", "post"], detail=False)
     def dishes(self, request: Request) -> Response:
         if request.method == "GET":
-            dish_name = request.query_params.get("name")
-
-            if not dish_name:
-                restaurants = Restaurant.objects.all()
-            else:
-                restaurants = Restaurant.objects.prefetch_related(
-                    Prefetch(
-                        "dishes",
-                        queryset=Dish.objects.filter(name__icontains=dish_name),
-                    )
-                ).all()
-
-            page = self.paginate_queryset(restaurants)
-            if page is not None:
-                serializer = RestaurantSerializer(page, many=True)
-                return self.get_paginated_response(data=serializer.data)
-
-            serializer = RestaurantSerializer(restaurants, many=True)
-            return Response(data=serializer.data)
+            # Apply caching only for GET requests
+            response = self._get_dishes_with_cache(request)
+            return response
 
         elif request.method == "POST":
             serializer = DishCreatorSerializer(data=request.data)
@@ -278,6 +264,30 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
             return Response(DishSerializer(dish).data, status=201)
 
         return Response({"detail": f"Method {request.method} not allowed."}, status=405)
+
+    @method_decorator(cache_page(30))
+    def _get_dishes_with_cache(self, request: Request) -> Response:
+        dish_name = request.query_params.get("name")
+
+        if not dish_name:
+            restaurants = Restaurant.objects.all()
+        else:
+            restaurants = Restaurant.objects.prefetch_related(
+                Prefetch(
+                    "dishes",
+                    queryset=Dish.objects.filter(name__icontains=dish_name),
+                )
+            ).all()
+
+        page = self.paginate_queryset(restaurants)
+        if page is not None:
+            serializer = RestaurantSerializer(page, many=True)
+            return self.get_paginated_response(data=serializer.data)
+
+        serializer = RestaurantSerializer(restaurants, many=True)
+        # import time
+        # time.sleep(3)
+        return Response(data=serializer.data)
 
     # HTTP POST /food/orders/ {}
     # @transaction.atomic    <-- also available

@@ -161,3 +161,15 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://localhost:6379/0",
+        #           https://rozetka.com/prducts/phones/9fceb20b-c7a1-4176-b9e1-711b8d9f5778
+    }
+}
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "localhost"
+EMAIL_PORT = 1025
