@@ -170,6 +170,8 @@ CACHES = {
     }
 }
 
+ACTIVATION_KEY_TLL = 800
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "localhost"
 EMAIL_PORT = 1025

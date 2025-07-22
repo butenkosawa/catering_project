@@ -8,7 +8,6 @@ Structure:
 # from dataclasses import asdict, dataclass
 import redis
 import json
-from typing import Any
 
 
 # @dataclass
@@ -40,7 +39,10 @@ class CacheService:
 
     def get(self, namespace: str, key: str):
         result: str = self.connection.get(self._build_key(namespace, key))  # type: ignore
+        try:
+            return json.loads(result)
+        except TypeError:
+            return None
 
-        return json.loads(result)
-
-    def delete(self, namespace: str, key: str): ...
+    def delete(self, namespace: str, key: str):
+        self.connection.delete(self._build_key(namespace, key))

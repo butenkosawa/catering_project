@@ -38,15 +38,14 @@ class UserSerialiser(serializers.ModelSerializer):
 
 class UserActivationSerializer(serializers.Serializer):
     key = serializers.UUIDField()
+    email = serializers.EmailField()
 
 
 class UsersAPIViewSet(viewsets.GenericViewSet):
     authentication_classes = [JWTAuthentication]
 
     def get_permissions(self):
-        if self.action == "create":
-            return [permissions.AllowAny()]
-        elif self.action == "activate":
+        if self.action in ("create", "activate"):
             return [permissions.AllowAny()]
         else:
             return [permissions.IsAuthenticated()]
@@ -66,24 +65,47 @@ class UsersAPIViewSet(viewsets.GenericViewSet):
         activation_key = activation_service.create_activation_key()
         activation_service.save_activation_information(
             user_id=getattr(serializer.instance, "id"),
-            activation_key=activation_key,
+            activation_key=str(activation_key),
         )
-        activation_service.send_user_activation_email(activation_key=activation_key)
+        activation_service.send_user_activation_email(
+            activation_key=str(activation_key)
+        )
 
         return Response(UserSerialiser(serializer.instance).data, status=201)
 
     @action(methods=["POST"], detail=False)
     def activate(self, request: Request) -> Response:
         serializer = UserActivationSerializer(data=request.data)
-        serializer.is_valid()
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        key = serializer.validated_data["key"]
 
-        activation_service = ActivationService()
+        try:
+            user = User.objects.get(email=email, is_active=False)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": f"User `{email}` does not exists or is already active"},
+                status=404,
+            )
+
+        activation_service = ActivationService(email=email)
+
         try:
             activation_service.activate_user(
                 activation_key=serializer.validated_data["key"]
             )
-        except ValueError as error:
-            raise ValidationError("Activation link expired") from error
+        except ValueError:
+            activation_service.resend_activation_link(user)
+            return Response(
+                {
+                    "detail": f"Key `{key}` does not exist. A new activation key has been sent to `{email}`"
+                },
+                status=404,
+            )
+        else:
+            activation_service.remove_activation_key(
+                activation_key=serializer.validated_data["key"]
+            )
 
         return Response(data=None, status=204)
 

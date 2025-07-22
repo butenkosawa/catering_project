@@ -1,5 +1,6 @@
 import uuid
 from django.core.mail import send_mail
+from django.conf import settings
 from shared.cache import CacheService
 from .models import User
 
@@ -32,7 +33,7 @@ class ActivationService:
             namespace="activation",
             key=activation_key,
             value={"user_id": user_id},
-            ttl=800,
+            ttl=getattr(settings, "ACTIVATION_KEY_TLL"),
         )
 
         return None
@@ -45,7 +46,7 @@ class ActivationService:
         activation_link = f"https://frontend.catering.com/activation/{activation_key}"
         send_mail(
             subject="User Activation",
-            message=f"Please? activate your account: {activation_link} ",
+            message=f"Please, activate your account: {activation_link} ",
             from_email="admin@catering.com",
             recipient_list=[self.email],
         )
@@ -66,7 +67,22 @@ class ActivationService:
         # or for instance
         # User.objects.filter(id=user...).update(is_active=True)
 
-    def resend_activation_link(self, email: str) -> None:
+    def resend_activation_link(self, user: User) -> None:
         """Send user activation link to specified email"""
 
-        raise NotImplemented
+        if self.email is None:
+            raise ValueError("No email specified for user activation process")
+
+        activation_key = self.create_activation_key()
+        self.save_activation_information(
+            user_id=user.id, activation_key=str(activation_key)  # type: ignore
+        )
+        self.send_user_activation_email(activation_key=str(activation_key))
+
+    def remove_activation_key(self, activation_key: str) -> None:
+        """Remove activation key from the cache"""
+
+        self.cache.delete(
+            namespace="activation",
+            key=activation_key,
+        )
