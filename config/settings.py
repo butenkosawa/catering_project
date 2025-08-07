@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -21,12 +22,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-&j_27(os&t8-=&i$c11ekofxtlue&$l1l@p#03!uw&m_l=t%l$"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(os.getenv("DJANGO_DEBUG", ""))
 
-ALLOWED_HOSTS = []
+print("*" * 30)
+print(SECRET_KEY)
+print(DEBUG)
+print("*" * 30)
+
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -81,8 +87,12 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DJANGO_DB_NAME", default="catering-hillel"),
+        "USER": os.getenv("DJANGO_DB_USER", default="postgres"),
+        "PASSWORD": os.getenv("DJANGO_DB_PASSWORD", default="postgres"),
+        "HOST": os.getenv("DJANGO_DB_HOST", default="database"),
+        "PORT": os.getenv("DJANGO_DB_PORT", default="5432"),
         # "ATOMIC_REQUESTS": True
     }
 }
@@ -164,11 +174,10 @@ SIMPLE_JWT = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://localhost:6379/0",
-        #           https://rozetka.com/prducts/phones/9fceb20b-c7a1-4176-b9e1-711b8d9f5778
+        "LOCATION": os.getenv("DJANG_CACHE_URL", default="redis://localhost:6379/0"),
     }
 }
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "localhost"
-EMAIL_PORT = 1025
+EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", default="mailing")
+EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", default="1025"))
