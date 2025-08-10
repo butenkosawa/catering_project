@@ -9,6 +9,7 @@ djangorestframework = "~=3.16.0"  # REST batteries
 djangorestframework-simplejwt = "~=5.5.0" # JWT Authentication
 redis = "~=6.2.0"
 psycopg2-binary = "~=2.9.10"
+python-dotenv = "~=1.1.1"
 
 [dev-packages]
 flake8="~=7.3.0"    # code quality

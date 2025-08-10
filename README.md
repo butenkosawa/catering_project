@@ -19,7 +19,90 @@ python manage.py dumpdata --natural-primary --natural-foregin --indent 2> tmp/du
 
 <br>
 
+# Docker Compose Setup
+
+This project is a Django application configured to run with PostgreSQL, Redis, and Mailpit via Docker Compose.
+
 ---
+
+### 📦 Requirements
+
+Before running the application, make sure you have:
+
+- [Docker](https://docs.docker.com/get-docker/) installed
+- A `.env` file in the project root
+
+---
+
+### ⚙️ Setting up the `.env` file
+
+1.  Copy the example environment file:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+2.  Update any values in `.env` if needed
+    (for example, change DJANGO_SECRET_KEY, database password, or debug mode).
+
+    Example:
+
+    ```
+    DJANGO_SECRET_KEY=mysecretkey
+    DJANGO_DEBUG=0
+    DJANGO_DB_PASSWORD=mypass
+    ```
+
+---
+
+### ▶️ Running the application
+
+1. Build and start all services:
+
+   ```
+   docker compose up --build
+   ```
+
+   This will start:
+
+   - database — PostgreSQL
+   - cache — Redis
+   - mailing — Mailpit SMTP server
+   - api — Django application
+
+2. Open the application in your browser: `http://localhost:8000`
+3. Open Mailpit UI (email testing): `http://localhost:8025`
+
+---
+
+### 🛠 Useful commands
+
+- Run Django migrations
+  ```
+  docker compose exec api python manage.py migrate
+  ```
+- Create a Django superuser
+  ```
+  docker compose exec api python manage.py createsuperuser
+  ```
+- Access Django shell
+  ```
+  docker compose exec api python manage.py shell
+  ```
+
+---
+
+### 🛑 Stopping the application
+
+To stop all containers:
+
+```
+docker compose down
+```
+
+<br>
+
+<br>
 
 # IDEA
 
@@ -136,7 +219,6 @@ Alternatives
   - pydantic
   - SQLAlchemy (allows async)
 - Laravel, Express, Ruby on Rails, Spring Boot, Symphony
-
 
 ## Basics about Web
 

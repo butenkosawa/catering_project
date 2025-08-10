@@ -9,6 +9,8 @@ Structure:
 import redis
 import json
 
+from config.settings import CACHE_URL
+
 
 # @dataclass
 # class Structure:
@@ -23,7 +25,7 @@ class CacheService:
     """
 
     def __init__(self) -> None:
-        self.connection: redis.Redis = redis.Redis.from_url("redis://localhost:6379/0")
+        self.connection: redis.Redis = redis.Redis.from_url(CACHE_URL)
 
     @staticmethod
     def _build_key(namespace: str, key: str) -> str:

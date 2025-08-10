@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,6 +33,9 @@ DEBUG = bool(os.getenv("DJANGO_DEBUG", ""))
 print("*" * 30)
 print(SECRET_KEY)
 print(DEBUG)
+print("*" * 30)
+print("DJANGO_DB_PASSWORD:", repr(os.getenv("DJANGO_DB_PASSWORD")))
+print("DJANGO_CACHE_URL:", repr(os.getenv("DJANGO_CACHE_URL")))
 print("*" * 30)
 
 ALLOWED_HOSTS = ["*"]
@@ -91,7 +97,7 @@ DATABASES = {
         "NAME": os.getenv("DJANGO_DB_NAME", default="catering-hillel"),
         "USER": os.getenv("DJANGO_DB_USER", default="postgres"),
         "PASSWORD": os.getenv("DJANGO_DB_PASSWORD", default="postgres"),
-        "HOST": os.getenv("DJANGO_DB_HOST", default="database"),
+        "HOST": os.getenv("DJANGO_DB_HOST", default="localhost"),
         "PORT": os.getenv("DJANGO_DB_PORT", default="5432"),
         # "ATOMIC_REQUESTS": True
     }
@@ -172,10 +178,12 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+CACHE_URL = os.getenv("DJANGO_CACHE_URL", "redis://cache:6379/0")
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": os.getenv("DJANG_CACHE_URL", default="redis://localhost:6379/0"),
+        "LOCATION": CACHE_URL,
     }
 }
 

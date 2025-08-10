@@ -4,7 +4,7 @@ services:
     # entrypoint: ... 
     # command: ...
     env_file:
-      - .env
+      - .env.example
     ports:
       - "8000:8000"
     depends_on:
@@ -14,20 +14,24 @@ services:
   database:
     image: postgres:17
     env_file:
-      - .env
+      - .env.example
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
   cache:
     image: redis:7
+    env_file:
+      - .env.example
     ports:
       - "6379:6379"
   mailing:
     image: axllent/mailpit:latest
+    env_file:
+      - .env.example
     ports:
-      - "1025:1025"  # http
-      - "8025:8025"  # smtp
+      - "1025:1025"  # smtp
+      - "8025:8025"  # http
 
 volumes:
   pgdata:
