@@ -1,0 +1,23 @@
+GET http://localhost:8001/healthcheck HTTP/1.1
+content-type: application/json
+
+### Get Order
+GET http://localhost:8001/api/orders/804e5474-47e6-4e5c-957a-90915ef2e372 HTTP/1.1
+content-type: application/json
+
+### Make Order
+POST http://localhost:8001/api/orders HTTP/1.1
+content-type: application/json
+
+{
+    "order": [
+        {
+            "dish": "Salad",
+            "quantity": 3
+        },
+        {
+            "dish": "Water",
+            "quantity": 2
+        }
+    ]
+}

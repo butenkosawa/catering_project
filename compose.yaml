@@ -28,6 +28,12 @@ services:
     ports:
       - "1025:1025"  # http
       - "8025:8025"  # smtp
-
+  uklon_mock:
+    # ...
+  silpo_mock:
+    # ...
+  kfc_mock:
+    # ...
+    
 volumes:
   pgdata:
