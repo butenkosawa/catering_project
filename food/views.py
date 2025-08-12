@@ -116,6 +116,10 @@ class OrderSerializer(serializers.Serializer):
         return value
 
 
+class KFCOrderSerializer(serializers.Serializer):
+    pass
+
+
 class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         assert type(request.user) == User
@@ -374,6 +378,14 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         order = Order.objects.get(id=id)
         serializer = OrderSerializer(order)
         return Response(data=serializer.data)
+
+    @action(methods=["post"], detail=False, url_path=r"webhooks/kfc")
+    def kfc_webhooks(self, request: Request):
+        """Handle KFC Webhook about order."""
+
+        breakpoint()  # TODO: remove
+        data = request.data
+        return
 
 
 def import_dishes(request):

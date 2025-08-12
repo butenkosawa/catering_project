@@ -13,9 +13,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv()
+# from dotenv import load_dotenv
+
+# load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -97,7 +98,7 @@ DATABASES = {
         "NAME": os.getenv("DJANGO_DB_NAME", default="catering-hillel"),
         "USER": os.getenv("DJANGO_DB_USER", default="postgres"),
         "PASSWORD": os.getenv("DJANGO_DB_PASSWORD", default="postgres"),
-        "HOST": os.getenv("DJANGO_DB_HOST", default="localhost"),
+        "HOST": os.getenv("DJANGO_DB_HOST", default="database"),
         "PORT": os.getenv("DJANGO_DB_PORT", default="5432"),
         # "ATOMIC_REQUESTS": True
     }
