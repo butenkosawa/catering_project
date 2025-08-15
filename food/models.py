@@ -44,6 +44,20 @@ class Order(models.Model):
     def __str__(self) -> str:
         return f"[{self.pk}] {self.status} for {self.user.email}"
 
+    def items_by_restaurant(self) -> dict["Restaurant", models.QuerySet["OrderItem"]]:
+        results = {}
+
+        # get all items for this order, optimize the query
+        qs = self.items.select_related("dish__restaurant")
+
+        # N+1
+        restaurants = {item.dish.restaurant for item in qs}
+
+        for restaurant in restaurants:
+            results[restaurant] = qs.filter(dish__restaurant=restaurant)
+
+        return results
+
 
 class OrderItem(models.Model):
     class Meta:

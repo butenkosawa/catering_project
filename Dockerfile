@@ -29,6 +29,9 @@ COPY Pipfile Pipfile.lock ./
 # Copy project files
 COPY . .
 
+# ====================================================
+# MULTI-STAGE BUILDS FOR ENVIRONMENTS
+# ====================================================
 
 FROM base AS dev
 
@@ -46,3 +49,33 @@ RUN pipenv install --deploy --system
 EXPOSE 8000/tcp
 ENTRYPOINT [ "python" ]
 CMD [ "-m", "gunicorn", "config.wsgi:application" ]
+
+# ====================================================
+# MULTI-STAGE BUILDS FOR PROVIDERS
+# ====================================================
+
+FROM base AS silpo
+
+RUN pipenv install sync --dev --system
+
+EXPOSE 8000/tcp
+ENTRYPOINT [ "python" ]
+CMD [ "-m", "uvicorn", "tests.providers.silpo:app", "--host", "0.0.0.0" ]
+
+
+FROM base AS kfc
+
+RUN pipenv install sync --dev --system
+
+EXPOSE 8000/tcp
+ENTRYPOINT [ "python" ]
+CMD [ "-m", "uvicorn", "tests.providers.kfc:app", "--host", "0.0.0.0" ]
+
+
+FROM base AS uklon
+
+RUN pipenv install sync --dev --system
+
+EXPOSE 8000/tcp
+ENTRYPOINT [ "python" ]
+CMD [ "-m", "uvicorn", "tests.providers.uklon:app", "--host", "0.0.0.0" ]

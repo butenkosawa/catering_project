@@ -51,9 +51,10 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 
+from users.models import Role, User
 from .enums import DeliveryProvider
 from .models import Restaurant, Dish, Order, OrderItem, OrderStatus
-from users.models import Role, User
+from .services import schedule_order
 
 
 class DishSerializer(serializers.ModelSerializer):
@@ -196,9 +197,14 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         # time.sleep(3)
         return Response(data=serializer.data)
 
-    # HTTP POST /food/orders/ {}
-    # @transaction.atomic    <-- also available
-    @action(methods=["post"], detail=False, url_path=r"orders")
+    # HTTP GET /food/orders/4
+    @action(methods=["get"], detail=False, url_path=r"orders/(?P<id>\d+)")
+    def retrieve_order(self, request: Request, id: int) -> Response:
+        order = Order.objects.get(id=id)
+        serializer = OrderSerializer(order)
+        return Response(data=serializer.data)
+
+    # HTTP POST /food/orders/
     def create_order(self, request: Request) -> Response:
         serializer = OrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -213,7 +219,6 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
             )
 
             items = serializer.validated_data["items"]
-
             for dish_order in items:
                 # raise ValueError("Some Error Occurred")
                 instance = OrderItem.objects.create(
@@ -225,18 +230,10 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
 
         print(f"New Food Order is created: {order.pk}. ETA: {order.eta}")
 
-        # TODO: Run Scheduler
+        schedule_order(order)
 
         return Response(OrderSerializer(order).data, status=201)
 
-    # HTTP GET /food/orders/4
-    @action(methods=["get"], detail=False, url_path=r"orders/(?P<id>\d+)")
-    def retrieve_order(self, request: Request, id: int) -> Response:
-        order = Order.objects.get(id=id)
-        serializer = OrderSerializer(order)
-        return Response(data=serializer.data)
-
-    @action(methods=["get"], detail=False, url_path=r"orders")
     def all_orders(self, request: Request) -> Response:
         # filters = FoodFilters(**request.query_params.dict())
         # status: str | None = request.query_params.get("status")
@@ -268,13 +265,12 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
 
-    @action(methods=["post"], detail=False, url_path=r"webhooks/kfc")
-    def kfc_webhooks(self, request: Request):
-        """Handle KFC Webhook about order."""
-
-        breakpoint()  # TODO: remove
-        data = request.data
-        return
+    @action(methods=["get", "post"], detail=False)
+    def orders(self, request: Request) -> Response:
+        if request.method == "POST":
+            return self.create_order(request)
+        else:
+            return self.all_orders(request)
 
 
 def import_dishes(request):

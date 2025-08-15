@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,13 +30,7 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(os.getenv("DJANGO_DEBUG", ""))
 
-print("*" * 30)
-print(SECRET_KEY)
-print(DEBUG)
-print("*" * 30)
-
 ALLOWED_HOSTS = ["*"]
-
 
 # Application definition
 
@@ -88,7 +85,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DJANGO_DB_NAME", default="catering-hillel"),
+        "NAME": os.getenv("DJANGO_DB_NAME", default="catering"),
         "USER": os.getenv("DJANGO_DB_USER", default="postgres"),
         "PASSWORD": os.getenv("DJANGO_DB_PASSWORD", default="postgres"),
         "HOST": os.getenv("DJANGO_DB_HOST", default="database"),
