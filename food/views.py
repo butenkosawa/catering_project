@@ -52,9 +52,10 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 
+from users.models import Role, User
 from .enums import DeliveryProvider
 from .models import Restaurant, Dish, Order, OrderItem, OrderStatus
-from users.models import Role, User
+from .services import schedule_order
 
 
 class DishCreatorSerializer(serializers.ModelSerializer):
@@ -293,84 +294,87 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         # time.sleep(3)
         return Response(data=serializer.data)
 
-    # HTTP POST /food/orders/ {}
+    def all_orders(self, request: Request) -> Response:
+        filters = FoodFilters(**request.query_params.dict())
+        orders = Order.objects.select_related("user").all()
+
+        filter_mapping = {
+            "delivery_provider": "delivery_provider",
+            "status": "status",
+            "user_id": "user_id",
+            "min_total": "total__gte",
+            "max_total": "total__lte",
+            "eta_from": "eta__gte",
+            "eta_to": "eta__lte",
+        }
+
+        filter_kwargs = {}
+        for filter_attr, django_filter in filter_mapping.items():
+            if hasattr(filters, filter_attr):
+                value = getattr(filters, filter_attr)
+                if value is not None:
+                    filter_kwargs[django_filter] = value
+
+        if filter_kwargs:
+            orders = orders.filter(**filter_kwargs)
+
+        # =====================
+        # PageNumberPagination
+        # =====================
+        # paginator = PageNumberPagination()
+        # paginator.page_size = 2
+        # paginator.page_size_query_param = "size"
+        # page = paginator.paginate_queryset(orders, request, view=self)
+
+        # =====================
+        # LimitOffsetPagination
+        # =====================
+        page = self.paginate_queryset(orders)
+
+        if page is not None:
+            serializer = OrderSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
+    def create_order(self, request: Request) -> Response:
+        serializer = OrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            order = Order.objects.create(
+                status=OrderStatus.NOT_STARTED,
+                user=request.user,
+                delivery_provider="uklon",
+                eta=serializer.validated_data["eta"],
+                total=serializer.calculated_total,
+            )
+            items = serializer.validated_data["items"]
+
+            for dish_order in items:
+                # raise ValueError("Some Error Occurred")
+                instance = OrderItem.objects.create(
+                    dish=dish_order["dish"],
+                    quantity=dish_order["quantity"],
+                    order=order,
+                )
+                print(f"New Dish Order Item is created: {instance.pk}")
+
+        print(f"New Food Order is created: {order.pk}. ETA: {order.eta}")
+
+        schedule_order(order)
+
+        return Response(OrderSerializer(order).data, status=201)
+
+    # HTTP POST /food/orders/
     # @transaction.atomic    <-- also available
     @action(methods=["get", "post"], detail=False)
     def orders(self, request: Request) -> Response:
-        if request.method == "GET":
-            filters = FoodFilters(**request.query_params.dict())
-            orders = Order.objects.select_related("user").all()
-
-            filter_mapping = {
-                "delivery_provider": "delivery_provider",
-                "status": "status",
-                "user_id": "user_id",
-                "min_total": "total__gte",
-                "max_total": "total__lte",
-                "eta_from": "eta__gte",
-                "eta_to": "eta__lte",
-            }
-
-            filter_kwargs = {}
-            for filter_attr, django_filter in filter_mapping.items():
-                if hasattr(filters, filter_attr):
-                    value = getattr(filters, filter_attr)
-                    if value is not None:
-                        filter_kwargs[django_filter] = value
-
-            if filter_kwargs:
-                orders = orders.filter(**filter_kwargs)
-
-            # =====================
-            # PageNumberPagination
-            # =====================
-            # paginator = PageNumberPagination()
-            # paginator.page_size = 2
-            # paginator.page_size_query_param = "size"
-            # page = paginator.paginate_queryset(orders, request, view=self)
-
-            # =====================
-            # LimitOffsetPagination
-            # =====================
-            page = self.paginate_queryset(orders)
-
-            if page is not None:
-                serializer = OrderSerializer(page, many=True)
-                return self.get_paginated_response(serializer.data)
-
-            serializer = OrderSerializer(orders, many=True)
-            return Response(serializer.data)
-
-        elif request.method == "POST":
-            serializer = OrderSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-
-            with transaction.atomic():
-                order = Order.objects.create(
-                    status=OrderStatus.NOT_STARTED,
-                    user=request.user,
-                    delivery_provider="uklon",
-                    eta=serializer.validated_data["eta"],
-                    total=serializer.calculated_total,
-                )
-                items = serializer.validated_data["items"]
-
-                for dish_order in items:
-                    # raise ValueError("Some Error Occurred")
-                    instance = OrderItem.objects.create(
-                        dish=dish_order["dish"],
-                        quantity=dish_order["quantity"],
-                        order=order,
-                    )
-                    print(f"New Dish Order Item is created: {instance.pk}")
-
-            print(f"New Food Order is created: {order.pk}. ETA: {order.eta}")
-
-            # TODO: Run Scheduler
-
-            return Response(OrderSerializer(order).data, status=201)
-
-        return Response({"detail": f"Method {request.method} not allowed."}, status=405)
+        if request.method == "POST":
+            return self.create_order(request)
+        else:
+            return self.all_orders(request)
 
     # HTTP GET /food/orders/4
     @action(methods=["get"], detail=False, url_path=r"orders/(?P<id>\d+)")
@@ -378,14 +382,6 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         order = Order.objects.get(id=id)
         serializer = OrderSerializer(order)
         return Response(data=serializer.data)
-
-    @action(methods=["post"], detail=False, url_path=r"webhooks/kfc")
-    def kfc_webhooks(self, request: Request):
-        """Handle KFC Webhook about order."""
-
-        breakpoint()  # TODO: remove
-        data = request.data
-        return
 
 
 def import_dishes(request):

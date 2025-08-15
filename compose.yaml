@@ -33,12 +33,30 @@ services:
       - "1025:1025"  # smtp
       - "8025:8025"  # http
 
-  uklon_mock:
-    # ...
   silpo_mock:
-    # ...
+    build: 
+      context: . 
+      dockerfile: dockerfile
+      target: silpo
+    container_name: catering-silpo-kfc_mock
+    ports:
+      - "8001:8000"
   kfc_mock:
-    # ...
+    build: 
+      context: .
+      dockerfile: dockerfile
+      target: kfc
+    container_name: catering-silpo-kfc_mock
+    ports:
+      - "8002:8000"
+  uklon_mock:
+    build: 
+      context: .
+      dockerfile: dockerfile
+      target: uklon
+    container_name: catering-silpo-uklon_mock
+    ports:
+      - "8003:8000"
 
 volumes:
   pgdata:
