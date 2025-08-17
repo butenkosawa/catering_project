@@ -11,7 +11,7 @@ OrderStatus = Literal["not started", "cooking", "cooked", "finished"]
 STORAGE: dict[str, OrderStatus] = {}
 CATERING_API_WEBHOOK_URL = "http://localhost:8000/webhooks/kfc"
 
-app = FastAPI()
+app = FastAPI(title="KFC API")
 
 
 class OrderItem(BaseModel):

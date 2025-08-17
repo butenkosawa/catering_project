@@ -1,11 +1,13 @@
 from dataclasses import dataclass, field, asdict
 from time import sleep
+from threading import Thread
 
+from config import celery_app
 from shared.cache import CacheService
 
 from .models import Order, Restaurant, OrderItem
 from .enums import OrderStatus
-from .providers import silpo
+from .providers import silpo, kfc
 from .mapper import RESTAURANT_EXTERNAL_TO_INTERNAL
 
 
@@ -14,7 +16,7 @@ class TrackingOrder:
     """
     {
         17.: {
-            restaurants: {
+            restaurants: {  // internal Order.id
                 1. {  // internal restaurant id
                     status: NOT_STARTED, // internal
                     external_id: 13,
@@ -36,6 +38,21 @@ class TrackingOrder:
     delivery: dict = field(default_factory=dict)
 
 
+def all_orders_cooked(order_id: int):
+    cache = CacheService()
+    tracking_order = TrackingOrder(**cache.get(namespace="orders", key=str(order_id)))
+    print(f"Checking if all orders are cooked: {tracking_order.restaurants}")
+
+    results = all(
+        (
+            payload["status"] == OrderStatus.COOKED
+            for _, payload in tracking_order.restaurants.items()
+        )
+    )
+    return results
+
+
+@celery_app.task(queue="default")
 def order_in_silpo(order_id: int, items):
     """Short polling requests to the Silpo API
 
@@ -50,23 +67,32 @@ def order_in_silpo(order_id: int, items):
     cache = CacheService()
     restaurant = Restaurant.objects.get(name="Silpo")
 
-    def all_orders_cooked(order_id: int):
-        cache = CacheService()
-        tracking_order = TrackingOrder(
-            **cache.get(namespace="orders", key=str(order_id))
-        )
-        print(f"Checking if all orders are cooked: {tracking_order.restaurants}")
+    def get_internal_status(status: str) -> OrderStatus:
+        """Normalizes external status and maps it to internal.
+        Supports variants: 'not started', 'not_started', 'Not-Started', etc.
+        """
+        if status is None:
+            raise ValueError("External status is required")
 
-        results = all(
-            (
-                payload["status"] == OrderStatus.COOKED
-                for _, payload in tracking_order.restaurants.items()
+        provider_key = "silpo"
+        mapping = RESTAURANT_EXTERNAL_TO_INTERNAL.get(provider_key, {})
+
+        # normalize: trim, lower, replace spaces/dashes -> underscore
+        normalized = str(status).strip().lower().replace(" ", "_").replace("-", "_")
+
+        # Try normalized, then plain lower, then original
+        internal = mapping.get(normalized)
+
+        if internal is None:
+            # additional log for diagnostics
+            print(
+                f"Unknown external status for {provider_key}: {status!r}. Known keys: {list(mapping.keys())}"
             )
-        )
-        return results
+            raise ValueError(
+                f"Unknown external status '{status}' for provider '{provider_key}'"
+            )
 
-    def get_internal_status(status: silpo.OrderStatus) -> OrderStatus:
-        return RESTAURANT_EXTERNAL_TO_INTERNAL["silpo"][status]
+        return internal
 
     cooked = False
 
@@ -86,7 +112,7 @@ def order_in_silpo(order_id: int, items):
         print(f"CURRENT SILPO ORDER STATUS: {silpo_order["status"]}")
 
         if not silpo_order["external_id"]:
-            # MAKE THE FIRST REQUEST IF NOT STARTED
+            # ✨ MAKE THE FIRST REQUEST IF NOT STARTED
             response: silpo.OrderResponse = client.create_order(
                 silpo.OrderRequestBody(
                     order=[
@@ -107,9 +133,13 @@ def order_in_silpo(order_id: int, items):
             )
         else:
             # IF ALREADE HAVE EXTERNAL ID - JUST RETRIEVE THE ORDER
-            response = client.get_order(str(order_id))
+            # PASS EXTERNAL SILPO ORDER ID
+            response = client.get_order(silpo_order["external_id"])
             internal_status = get_internal_status(response.status)
-            print("Treaking for Silpo Order with HTTP GET /orders")
+
+            print(
+                f"Treaking for Silpo Order with HTTP GET /api/orders. Status: {internal_status}"
+            )
 
             if silpo_order["status"] != internal_status:
                 tracking_order.restaurants[str(restaurant.pk)][
@@ -119,6 +149,9 @@ def order_in_silpo(order_id: int, items):
                 cache.set(
                     namespace="orders", key=str(order_id), value=asdict(tracking_order)
                 )
+                # if started cooking
+                if internal_status == OrderStatus.COOKING:
+                    Order.objects.filter(id=order_id).update(status=OrderStatus.COOKING)
 
             if internal_status == OrderStatus.COOKED:
                 print("ORDER IS COOKED")
@@ -126,17 +159,33 @@ def order_in_silpo(order_id: int, items):
 
                 # CHECK IF ALL ORDERS ARE COOKED
                 if all_orders_cooked(order_id):
-                    cache.set(
-                        namespace="orders",
-                        key=str(order_id),
-                        value=asdict(tracking_order),
-                    )
-
-                    # TODO: UPDATE DATABASE INSTANCE
+                    Order.objects.filter(id=order_id).update(status=OrderStatus.COOKED)
 
 
+@celery_app.task(queue="high_priority")
 def order_in_kfc(order_id: int, items):
-    pass
+    client = kfc.Client()
+    cache = CacheService()
+    restaurant = Restaurant.objects.get(name="KFC")
+
+    # GET ITTRACKING ORDER FROM THE CACHE
+    tracking_order = TrackingOrder(**cache.get(namespace="orders", key=str(order_id)))
+
+    # UPDATE CACHE WITH EXTERNAL ID AND STATE
+    tracking_order.restaurants[str(restaurant.pk)] = {
+        "external_ID": "MOCK",
+        "status": OrderStatus.COOKED,
+    }
+
+    print("Created MOCKED KFC Order. External ID: 'MOCK', Status: 'COOKED'")
+    cache.set(namespace="orders", key=str(order_id), value=asdict(tracking_order))
+
+    # TODO: Implement WEBHooks for KFC
+
+    # CHECK IF ALL ORDERS ARE COOKED
+    if all_orders_cooked(order_id):
+        cache.set(namespace="orders", key=str(order_id), value=asdict(tracking_order))
+        Order.objects.filter(id=order_id).update(status=OrderStatus.COOKED)
 
 
 def schedule_order(order: Order):
@@ -159,14 +208,12 @@ def schedule_order(order: Order):
     for restaurant, items in items_by_restaurants.items():
         match restaurant.name.lower():
             case "silpo":
-                order_in_silpo(order.pk, items)
+                order_in_silpo.delay(order.pk, items)
+                # or
+                # order_in_silpo.apply_async()
             case "kfc":
-                order_in_kfc(order.pk, items)
+                order_in_kfc.delay(order.pk, items)
             case _:
                 raise ValueError(
                     f"Restaurant {restaurant.name} is not available for processing"
                 )
-
-    breakpoint()
-
-    return

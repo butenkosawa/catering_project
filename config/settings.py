@@ -171,10 +171,26 @@ SIMPLE_JWT = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": os.getenv("DJANG_CACHE_URL", default="redis://localhost:6379/0"),
+        "LOCATION": os.getenv("DJANGO_CACHE_URL", default="redis://cache:6379/0"),
     }
 }
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", default="mailing")
 EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", default="1025"))
+
+# =========================================
+# CELERY SECTION
+# =========================================
+CELERY_BROKER_URL = os.getenv("DJANGO_BROKER_URL", default="redis://broker:6379/0")
+
+CELERY_ACCEPT_CONTENT = ["pickle", "application/json"]
+
+CELERY_TASK_SERIALIZER = "pickle"
+
+CELERY_EVENT_SERIALIZER = "pickle"
+
+CELERY_TASK_QUEUES = {
+    "default": {"exchange": "default", "routing_key": "default"},
+    "high_priority": {"exchange": "high_priority", "routing_key": "high_priority"},
+}

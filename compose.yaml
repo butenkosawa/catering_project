@@ -23,33 +23,37 @@ services:
     image: redis:7
     ports:
       - "6379:6379"
+  broker:
+    image: redis:7
+    ports:
+      - "6380:6379"
   mailing:
     image: axllent/mailpit:latest
     ports:
       - "1025:1025"  # http
       - "8025:8025"  # smtp
-  silpo_mock:
+  silpo-mock:
     build: 
       context: . 
-      dockerfile: dockerfile
+      dockerfile: Dockerfile.test
       target: silpo
-    container_name: catering-silpo-kfc_mock
+    container_name: catering-silpo-mock
     ports:
       - "8001:8000"
-  kfc_mock:
+  kfc-mock:
     build: 
       context: .
-      dockerfile: dockerfile
+      dockerfile: Dockerfile.test
       target: kfc
-    container_name: catering-silpo-kfc_mock
+    container_name: catering-kfc-mock
     ports:
       - "8002:8000"
-  uklon_mock:
+  uklon-mock:
     build: 
       context: .
-      dockerfile: dockerfile
+      dockerfile: Dockerfile.test
       target: uklon
-    container_name: catering-silpo-uklon_mock
+    container_name: catering-uklon-mock
     ports:
       - "8003:8000"
     

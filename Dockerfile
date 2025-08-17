@@ -6,7 +6,7 @@
 # CMD - command to execute
 
 
-FROM python:3.13-slim as base
+FROM python:3.13-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -35,7 +35,7 @@ COPY . .
 
 FROM base AS dev
 
-RUN pipenv install sync --dev --system
+RUN pipenv sync --dev --system
 
 EXPOSE 8000/tcp
 ENTRYPOINT [ "python" ]
@@ -48,34 +48,4 @@ RUN pipenv install --deploy --system
 
 EXPOSE 8000/tcp
 ENTRYPOINT [ "python" ]
-CMD [ "-m", "gunicorn", "config.wsgi:application" ]
-
-# ====================================================
-# MULTI-STAGE BUILDS FOR PROVIDERS
-# ====================================================
-
-FROM base AS silpo
-
-RUN pipenv install sync --dev --system
-
-EXPOSE 8000/tcp
-ENTRYPOINT [ "python" ]
-CMD [ "-m", "uvicorn", "tests.providers.silpo:app", "--host", "0.0.0.0" ]
-
-
-FROM base AS kfc
-
-RUN pipenv install sync --dev --system
-
-EXPOSE 8000/tcp
-ENTRYPOINT [ "python" ]
-CMD [ "-m", "uvicorn", "tests.providers.kfc:app", "--host", "0.0.0.0" ]
-
-
-FROM base AS uklon
-
-RUN pipenv install sync --dev --system
-
-EXPOSE 8000/tcp
-ENTRYPOINT [ "python" ]
-CMD [ "-m", "uvicorn", "tests.providers.uklon:app", "--host", "0.0.0.0" ]
+CMD [ "-m", "uvicorn", "config.wsgi:application" ]
