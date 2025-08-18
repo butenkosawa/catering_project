@@ -15,7 +15,7 @@ STORAGE: dict[str, OrderStatus] = {}
 }
 """
 
-app = FastAPI()
+app = FastAPI(title="Silpo API")
 
 
 class OrderItem(BaseModel):

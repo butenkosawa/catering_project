@@ -6,6 +6,9 @@ install:
 installdev:
 	pipenv lock; pipenv sync --dev
 
+run:
+    python manage.py runserver
+
 build:
 	docker build -t catering-api .
 
@@ -17,3 +20,9 @@ iclean:
 
 vclean:
     docker volume prune
+
+worker_low:
+    celery -A config worker -l INFO -Q low_priority --pool=solo
+
+worker_high:
+    celery -A config worker -l INFO -Q high_priority --pool=solo

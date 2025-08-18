@@ -1,6 +1,8 @@
 import uuid
 from django.core.mail import send_mail
 from django.conf import settings
+
+from config import celery_app
 from shared.cache import CacheService
 from .models import User
 
@@ -77,7 +79,7 @@ class ActivationService:
         self.save_activation_information(
             user_id=user.id, activation_key=str(activation_key)  # type: ignore
         )
-        self.send_user_activation_email(activation_key=str(activation_key))
+        send_email.delay(email=self.email, activation_key=str(activation_key))  # type: ignore[attr-defined]
 
     def remove_activation_key(self, activation_key: str) -> None:
         """Remove activation key from the cache"""
@@ -86,3 +88,10 @@ class ActivationService:
             namespace="activation",
             key=activation_key,
         )
+
+
+@celery_app.task(queue="low_priority")
+def send_email(email: str, activation_key: str):
+    service = ActivationService(email=email)
+    print(f"SENDING ACTIVATION LINK TO: {email!r}")
+    service.send_user_activation_email(activation_key)

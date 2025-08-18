@@ -1,0 +1,40 @@
+FROM python:3.13-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Update System Dependencies
+RUN apt-get update -y \
+    # dependencies for building Python packages && clean apt packages
+    && apt-get install -y build-essential \ 
+    && rm -rf /var/lib/apt/lists/*
+
+# Update Project Dependencies
+RUN pip install --upgrade pip setuptools uvicorn httpx fastapi pydantic
+
+WORKDIR /app
+COPY ./tests/providers ./
+
+# ====================================================
+# MULTI-STAGE BUILDS FOR PROVIDERS
+# ====================================================
+
+FROM base AS silpo
+
+EXPOSE 8000/tcp
+ENTRYPOINT [ "python" ]
+CMD [ "-m", "uvicorn", "silpo:app", "--host", "0.0.0.0" ]
+
+
+FROM base AS kfc
+
+EXPOSE 8000/tcp
+ENTRYPOINT [ "python" ]
+CMD [ "-m", "uvicorn", "kfc:app", "--host", "0.0.0.0" ]
+
+
+FROM base AS uklon
+
+EXPOSE 8000/tcp
+ENTRYPOINT [ "python" ]
+CMD [ "-m", "uvicorn", "uklon:app", "--host", "0.0.0.0" ]

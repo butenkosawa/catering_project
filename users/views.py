@@ -8,7 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 
 from .models import User
-from .services import ActivationService
+from .services import ActivationService, send_email
 
 
 class UserSerialiser(serializers.ModelSerializer):
@@ -58,18 +58,16 @@ class UsersAPIViewSet(viewsets.GenericViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
+        email = getattr(serializer.instance, "email")
+
         # Activation process
-        activation_service = ActivationService(
-            email=getattr(serializer.instance, "email")
-        )
+        activation_service = ActivationService(email=email)
         activation_key = activation_service.create_activation_key()
         activation_service.save_activation_information(
             user_id=getattr(serializer.instance, "id"),
             activation_key=str(activation_key),
         )
-        activation_service.send_user_activation_email(
-            activation_key=str(activation_key)
-        )
+        send_email.delay(email=email, activation_key=str(activation_key))  # type: ignore[attr-defined]
 
         return Response(UserSerialiser(serializer.instance).data, status=201)
 
@@ -91,9 +89,7 @@ class UsersAPIViewSet(viewsets.GenericViewSet):
         activation_service = ActivationService(email=email)
 
         try:
-            activation_service.activate_user(
-                activation_key=serializer.validated_data["key"]
-            )
+            activation_service.activate_user(activation_key=key)
         except ValueError:
             activation_service.resend_activation_link(user)
             return Response(
@@ -103,9 +99,7 @@ class UsersAPIViewSet(viewsets.GenericViewSet):
                 status=404,
             )
         else:
-            activation_service.remove_activation_key(
-                activation_key=serializer.validated_data["key"]
-            )
+            activation_service.remove_activation_key(activation_key=key)
 
         return Response(data=None, status=204)
 
