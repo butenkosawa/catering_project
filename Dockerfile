@@ -35,6 +35,8 @@ COPY . .
 
 FROM base AS dev
 
+ENV C_FORCE_ROOT="true"
+
 RUN pipenv sync --dev --system
 
 EXPOSE 8000/tcp

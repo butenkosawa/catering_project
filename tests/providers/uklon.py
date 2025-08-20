@@ -4,17 +4,17 @@ import uuid
 
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel, Field
-from typing import Literal
+
 
 ORDER_STATUSES = ("not started", "delivery", "delivered")
 
 STORAGE: dict[str, dict] = {}
 
-app = FastAPI()
+app = FastAPI(title="Uklon API")
 
 
 class OrderRequestBody(BaseModel):
-    adresses: list[str] = Field(min_length=1)
+    addresses: list[str] = Field(min_length=1)
     comments: list[str] = Field(min_length=1)
 
 
@@ -28,7 +28,7 @@ async def delivery(order_id):
             STORAGE[order_id]["location"] = (random.random(), random.random())
             await asyncio.sleep(0.5)
 
-        print(f"Delivered to {address}")
+        print(f"🏁 Delivered to {address}")
 
 
 async def update_order_status(order_id):
@@ -50,7 +50,7 @@ async def make_order(body: OrderRequestBody, background_tasks: BackgroundTasks):
     STORAGE[order_id] = {
         "id": order_id,
         "status": "not started",
-        "addresses": body.adresses,
+        "addresses": body.addresses,
         "comments": body.comments,
         "location": (random.random(), random.random()),
     }

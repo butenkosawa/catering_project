@@ -37,13 +37,17 @@ CREATE ORDER FLOW
 
 import io
 import csv
+import json
 from typing import Any
 from datetime import date
+from dataclasses import asdict
 
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, serializers, routers, permissions
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -54,7 +58,7 @@ from rest_framework.pagination import PageNumberPagination, LimitOffsetPaginatio
 from users.models import Role, User
 from .enums import DeliveryProvider
 from .models import Restaurant, Dish, Order, OrderItem, OrderStatus
-from .services import schedule_order
+from .services import CacheService, TrackingOrder, schedule_order, all_orders_cooked
 
 
 class DishSerializer(serializers.ModelSerializer):
@@ -299,6 +303,34 @@ def import_dishes(request):
 
     print(f"{total} dishes uploaded to the database")
     return redirect(request.META.get("HTTP_REFERER", "/"))
+
+
+@csrf_exempt
+def kfc_webhook(request):
+    """Process KFC Order webhooks"""
+
+    print("KFC Webhook is Handled")
+
+    data: dict = json.loads(json.dumps(request.POST))
+
+    cache = CacheService()
+    restaurant = Restaurant.objects.get(name="KFC")
+    kfc_cache_order = cache.get(namespace="kfc_orders", key=data["id"])
+
+    # get internal order from the mapping
+    # add logging if order wasn't found
+
+    order: Order = Order.objects.get(id=kfc_cache_order["internal_order_id"])
+    tracking_order = TrackingOrder(**cache.get(namespace="orders", key=str(order.pk)))
+    tracking_order.restaurants[str(restaurant.pk)] |= {
+        "external_id": data["id"],
+        "status": OrderStatus.COOKED,
+    }
+
+    cache.set(namespace="orders", key=str(order.pk), value=asdict(tracking_order))
+    all_orders_cooked(order.pk)
+
+    return JsonResponse({"message": "ok"})
 
 
 router = routers.DefaultRouter()

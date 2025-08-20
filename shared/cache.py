@@ -8,6 +8,7 @@ Structure:
 # from dataclasses import asdict, dataclass
 import redis
 import json
+import os
 from typing import Any
 
 
@@ -24,7 +25,9 @@ class CacheService:
     """
 
     def __init__(self) -> None:
-        self.connection: redis.Redis = redis.Redis.from_url("redis://localhost:6379/0")
+        self.connection: redis.Redis = redis.Redis.from_url(
+            os.getenv("DJANGO_CACHE_URL", default="redis://cache:6379/0")
+        )
 
     @staticmethod
     def _build_key(namespace: str, key: str) -> str:
