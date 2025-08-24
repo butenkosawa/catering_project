@@ -17,10 +17,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# from dotenv import load_dotenv
-
-# load_dotenv()
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -175,6 +171,12 @@ SIMPLE_JWT = {
 
 CACHE_URL = os.getenv("DJANGO_CACHE_URL", "redis://cache:6379/0")
 
+CACHE_TTL = {
+    "ACTIVATION": 60 * 60 * 72,
+    "ORDER_DATA": 60 * 60 * 48,
+    "EXTERNAL_ORDER_DATA": 60 * 60 * 24,
+}
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
@@ -203,3 +205,5 @@ CELERY_TASK_QUEUES = {
     "low_priority": {"exchange": "low_priority", "routing_key": "low_priority"},
     "high_priority": {"exchange": "high_priority", "routing_key": "high_priority"},
 }
+
+# CELERY_TASK_ALWAYS_EAGER = bool(os.getenv("CELERY_TASK_ALWAYS_EAGER", default=""))

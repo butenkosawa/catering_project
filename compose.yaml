@@ -1,6 +1,9 @@
 services:
-  api:
-    build: .
+  api: &api
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
     # entrypoint: ... 
     # command: ...
     env_file:
@@ -11,6 +14,20 @@ services:
       - database
       - cache
       - mailing
+    volumes:
+      - ./:/app/
+  worker-low-priority:
+    <<: *api
+    container_name: catering-worker-low-priority
+    entrypoint: bash
+    command: -c "watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q low_priority --pool=solo"
+    ports: []
+  worker-high-priority:
+    <<: *api
+    container_name: catering-worker-high-priority
+    entrypoint: bash
+    command: -c "watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q high_priority --pool=solo"
+    ports: []
   database:
     image: postgres:17
     env_file:
@@ -61,6 +78,14 @@ services:
     container_name: catering-uklon-mock
     ports:
       - "8003:8000"
+  uber-mock:
+    build: 
+      context: .
+      dockerfile: Dockerfile.test
+      target: uber
+    container_name: catering-uber-mock
+    ports:
+      - "8004:8000"
 
 volumes:
   pgdata:

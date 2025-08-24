@@ -37,25 +37,36 @@ CREATE ORDER FLOW
 
 import io
 import csv
+import json
+from dataclasses import asdict
 from typing import Any
 from datetime import date
 
 from django.db import transaction
 from django.db.models import Prefetch
+from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, serializers, routers, permissions
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
+from rest_framework.pagination import LimitOffsetPagination
 
+from config.settings import CACHE_TTL
+from shared.cache import CacheService
 from users.models import Role, User
 from .enums import DeliveryProvider
 from .models import Restaurant, Dish, Order, OrderItem, OrderStatus
-from .services import schedule_order
+from .services import (
+    TrackingOrder,
+    all_orders_cooked,
+    get_tracking_order,
+    schedule_order,
+)
 
 
 class DishCreatorSerializer(serializers.ModelSerializer):
@@ -346,7 +357,7 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
             order = Order.objects.create(
                 status=OrderStatus.NOT_STARTED,
                 user=request.user,
-                delivery_provider="uklon",
+                delivery_provider=serializer.validated_data["delivery_provider"],
                 eta=serializer.validated_data["eta"],
                 total=serializer.calculated_total,
             )
@@ -414,6 +425,81 @@ def import_dishes(request):
 
     print(f"{total} dishes uploaded to the database")
     return redirect(request.META.get("HTTP_REFERER", "/"))
+
+
+@csrf_exempt
+def kfc_webhook(request):
+    """Process KFC Order webhooks."""
+
+    print("KFC Webhook is Handled")
+
+    data: dict = json.loads(json.dumps(request.POST))
+
+    cache = CacheService()
+    restaurant = Restaurant.objects.get(name="KFC")
+    kfc_cache_order = cache.get("kfc_orders", key=data["id"])
+
+    # get internal order from the mapping
+    # add logging if order wasn't found
+
+    order: Order = Order.objects.get(id=kfc_cache_order["internal_order_id"])
+    tracking_order = get_tracking_order(order.pk)
+    tracking_order.restaurants[str(restaurant.pk)] |= {
+        "external_id": data["id"],
+        "status": OrderStatus.COOKED,
+    }
+
+    cache.set(
+        namespace="orders",
+        key=str(order.pk),
+        value=asdict(tracking_order),
+        ttl=CACHE_TTL["ORDER_DATA"],
+    )
+
+    all_orders_cooked(order.pk)
+
+    return JsonResponse({"message": "ok"})
+
+
+@csrf_exempt
+def uber_webhook(request):
+    """Process UBER Order webhooks."""
+
+    print("UBER Webhook is Handled")
+
+    data: dict = json.loads(json.dumps(request.POST))
+
+    cache = CacheService()
+    uber_cache_order = cache.get("uber_orders", key=data["id"])
+
+    # get internal order from the mapping
+    # add logging if order wasn't found
+
+    order: Order = Order.objects.get(id=uber_cache_order["internal_order_id"])
+    tracking_order = get_tracking_order(order.pk)
+
+    if data["location"] == "delivery":
+        tracking_order.delivery |= {
+            "location": data["location"],
+            "status": OrderStatus.DELIVERY,
+        }
+    else:
+        tracking_order.delivery |= {
+            "location": data["location"],
+            "status": OrderStatus.DELIVERED,
+        }
+        print(f"🏁 UBER [{order.status}]: 📍 {data["location"]}")
+
+    cache.set(
+        namespace="orders",
+        key=str(order.pk),
+        value=asdict(tracking_order),
+        ttl=CACHE_TTL["ORDER_DATA"],
+    )
+    order.status = OrderStatus.DELIVERED
+    order.save()
+
+    return JsonResponse({"message": "ok"})
 
 
 router = routers.DefaultRouter()

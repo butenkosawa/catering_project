@@ -1,8 +1,8 @@
 import uuid
 from django.core.mail import send_mail
-from django.conf import settings
 
 from config import celery_app
+from config.settings import CACHE_TTL
 from shared.cache import CacheService
 from .models import User
 
@@ -35,7 +35,7 @@ class ActivationService:
             namespace="activation",
             key=activation_key,
             value={"user_id": user_id},
-            ttl=getattr(settings, "ACTIVATION_KEY_TLL"),
+            ttl=CACHE_TTL["ACTIVATION"],
         )
 
         return None

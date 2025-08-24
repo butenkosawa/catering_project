@@ -58,6 +58,18 @@ class Order(models.Model):
 
         return results
 
+    def delivery_meta(self) -> tuple[str, str]:
+        """Return addresses without duplicates."""
+
+        return (
+            self.items.select_related("dish__restaurant")
+            .values_list(
+                "dish__restaurant__name",
+                "dish__restaurant__address",
+            )
+            .distinct()
+        )
+
 
 class OrderItem(models.Model):
     class Meta:

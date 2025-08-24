@@ -14,7 +14,7 @@ ENV PYTHONUNBUFFERED=1
 # Update System Dependencies
 RUN apt-get update -y \
     # dependencies for building Python packages && clean apt packages
-    && apt-get install -y build-essential \ 
+    && apt-get install -y build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Set Working Dir
@@ -28,12 +28,15 @@ COPY Pipfile Pipfile.lock ./
 
 # Copy project files
 COPY . .
+RUN ls -l /app
 
 # ====================================================
 # MULTI-STAGE BUILDS FOR ENVIRONMENTS
 # ====================================================
 
 FROM base AS dev
+
+ENV C_FORCE_ROOT="true"
 
 RUN pipenv sync --dev --system
 
@@ -48,4 +51,4 @@ RUN pipenv install --deploy --system
 
 EXPOSE 8000/tcp
 ENTRYPOINT [ "python" ]
-CMD [ "-m", "gunicorn", "config.wsgi:application" ] # uvicorn
+CMD [ "-m", "gunicorn", "config.wsgi:application" ]
