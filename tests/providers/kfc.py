@@ -10,7 +10,7 @@ from typing import Literal
 OrderStatus = Literal["not started", "cooking", "cooked", "finished"]
 STORAGE: dict[str, OrderStatus] = {}
 CATERING_API_WEBHOOK_URL = (
-    "http://localhost:8000/webhooks/kfc/3d4d05d9-835e-433d-bb3b-e218bcbfa431/"
+    "http://api:8000/webhooks/kfc/3d4d05d9-835e-433d-bb3b-e218bcbfa431/"
 )
 
 app = FastAPI(title="KFC API")

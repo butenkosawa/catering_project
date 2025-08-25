@@ -30,7 +30,7 @@ class OrderResponse:
 
 class Client:
     # the url of running service
-    BASE_URL = "http://localhost:8001/api/orders"
+    BASE_URL = "http://silpo-mock:8000/api/orders"
 
     @classmethod
     def create_order(cls, order: OrderRequestBody):

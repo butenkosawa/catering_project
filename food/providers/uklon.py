@@ -27,7 +27,7 @@ class OrderResponse:
 
 class Client:
     # the url of running service
-    BASE_URL = "http://localhost:8003/drivers/orders"
+    BASE_URL = "http://uklon-mock:8000/drivers/orders"
 
     @classmethod
     def create_order(cls, order: OrderRequestBody):

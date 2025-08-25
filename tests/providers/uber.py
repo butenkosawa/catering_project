@@ -11,7 +11,7 @@ ORDER_STATUSES = ("not started", "delivery", "delivered")
 STORAGE: dict[str, dict] = {}
 
 CATERING_API_WEBHOOK_URL = (
-    "http://localhost:8000/webhooks/uber/e7a684e0-03e3-46ba-97eb-f3604abc494c/"
+    "http://api:8000/webhooks/uber/e7a684e0-03e3-46ba-97eb-f3604abc494c/"
 )
 
 app = FastAPI(title="Uber API")
