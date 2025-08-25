@@ -8,13 +8,13 @@ build:
 	docker build -t catering-api .
 
 iclean:
-    docker image prune
+	docker image prune
 
 vclean:
-    docker volume prune
+	docker volume prune
 
 run:
-    python manage.py runserver
+	python manage.py runserver
 
 docker:
 	docker compose up -d database cache broker mailing
@@ -32,10 +32,10 @@ uber_mock:
 	python -m uvicorn tests.providers.uber:app --port 8004 --reload
 
 worker_low:
-    watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q low_priority
+	watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q low_priority
 
 worker_high:
-    watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q high_priority
+	watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q high_priority
 
 fix:
 	python -m black .
