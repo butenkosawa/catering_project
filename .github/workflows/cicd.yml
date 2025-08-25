@@ -16,7 +16,6 @@ jobs:
       - name: install dependencies
         run: pip install pipenv && pipenv sync --dev --system
       - name: code quality check
-      - name: Run checks
         env:
           DJANGO_SECRET_KEY: your-secret-key
         run: make check
