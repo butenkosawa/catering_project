@@ -10,13 +10,13 @@ build:
 	docker build -t catering-api .
 
 iclean:
-    docker image prune
+	docker image prune
 
 vclean:
-    docker volume prune
+	docker volume prune
 
 run:
-    python manage.py runserver
+	python manage.py runserver
 
 docker:
 	docker compose up -d database cache broker mailing
@@ -34,13 +34,13 @@ uber_mock:
 	python -m uvicorn tests.providers.uber:app --port 8004 --reload
 
 worker_low:
-    watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q low_priority --pool=solo
+	watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q low_priority --pool=solo
 
 worker_high:
-    watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q high_priority --pool=solo
+	watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q high_priority --pool=solo
 
 fix:
 	python -m black .; python -m isort .
 
 check:
-	python -m flake8 .; python -m black --check; python -m isort --check; python -m mypy --exclude archive --exclude docs --check-untyped-defs .
+	python -m flake8 .; python -m black --check .; python -m isort --check .; python -m mypy --exclude archive --exclude docs --check-untyped-defs .
