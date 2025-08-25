@@ -68,12 +68,8 @@ def get_internal_status(provider_key: str, status: str) -> OrderStatus:
 
     if internal is None:
         # additional log for diagnostics
-        print(
-            f"Unknown external status for {provider_key}: {status!r}. Known keys: {list(mapping.keys())}"
-        )
-        raise ValueError(
-            f"Unknown external status '{status}' for provider '{provider_key}'"
-        )
+        print(f"Unknown external status for {provider_key}: {status!r}. Known keys: {list(mapping.keys())}")
+        raise ValueError(f"Unknown external status '{status}' for provider '{provider_key}'")
 
     return internal
 
@@ -83,12 +79,7 @@ def all_orders_cooked(order_id: int):
 
     print(f"Checking if all orders are cooked: {tracking_order.restaurants}")
 
-    if all(
-        (
-            payload["status"] == OrderStatus.COOKED
-            for _, payload in tracking_order.restaurants.items()
-        )
-    ):
+    if all((payload["status"] == OrderStatus.COOKED for _, payload in tracking_order.restaurants.items())):
         Order.objects.filter(id=order_id).update(status=OrderStatus.COOKED)
         print("✅ All orders are COOKED")
 
@@ -198,15 +189,11 @@ def order_delivery(order_id: int):
                 order.save()
                 delivery_by_uber(order=order, addresses=addresses, comments=comments)
             case _:
-                raise ValueError(
-                    f"Delivery provider {order.delivery_provider} is not available for processing"
-                )
+                raise ValueError(f"Delivery provider {order.delivery_provider} is not available for processing")
     except ValueError as err:
         print(err)
     else:
-        print(
-            f"✅ DONE with Delivery: Order [{order.pk}] | Provider [{order.delivery_provider}]"
-        )
+        print(f"✅ DONE with Delivery: Order [{order.pk}] | Provider [{order.delivery_provider}]")
 
 
 @celery_app.task(queue="high_priority")
@@ -243,15 +230,10 @@ def order_in_silpo(order_id: int, items):
             # MAKE THE FIRST REQUEST IF NOT STARTED
             response: silpo.OrderResponse = client.create_order(
                 silpo.OrderRequestBody(
-                    order=[
-                        silpo.OrderItem(dish=item.dish.name, quantity=item.quantity)
-                        for item in items
-                    ]
+                    order=[silpo.OrderItem(dish=item.dish.name, quantity=item.quantity) for item in items]
                 )
             )
-            internal_status: OrderStatus = get_internal_status(
-                provider_key="silpo", status=response.status
-            )
+            internal_status: OrderStatus = get_internal_status(provider_key="silpo", status=response.status)
             # UPDATE CACHE WITH EXTERNAL ID STATUS
             tracking_order.restaurants[str(restaurant.pk)] = {
                 "external_id": response.id,
@@ -267,17 +249,11 @@ def order_in_silpo(order_id: int, items):
             # IF ALREADY HAVE EXTERNAL ID - JUST RETRIEVE THE ORDER
             # PASS EXTERNAL SILPO ORDER ID
             response = client.get_order(silpo_order["external_id"])
-            internal_status = get_internal_status(
-                provider_key="silpo", status=response.status
-            )
-            print(
-                f"Tracking for Silpo Order with HTTP GET /api/orders. Status: {internal_status}"
-            )
+            internal_status = get_internal_status(provider_key="silpo", status=response.status)
+            print(f"Tracking for Silpo Order with HTTP GET /api/orders. Status: {internal_status}")
 
             if silpo_order["status"] != internal_status:
-                tracking_order.restaurants[str(restaurant.pk)][
-                    "status"
-                ] = internal_status
+                tracking_order.restaurants[str(restaurant.pk)]["status"] = internal_status
                 print(f"Silpo order status changed to {internal_status}")
                 cache.set(
                     namespace="orders",
@@ -304,12 +280,7 @@ def order_in_kfc(order_id: int, items):
     tracking_order = get_tracking_order(order_id)
 
     response: kfc.OrderResponse = client.create_order(
-        kfc.OrderRequestBody(
-            order=[
-                kfc.OrderItem(dish=item.dish.name, quantity=item.quantity)
-                for item in items
-            ]
-        )
+        kfc.OrderRequestBody(order=[kfc.OrderItem(dish=item.dish.name, quantity=item.quantity) for item in items])
     )
     internal_status = get_internal_status(provider_key="kfc", status=response.status)
 
@@ -369,6 +340,4 @@ def schedule_order(order: Order):
             case "kfc":
                 order_in_kfc.delay(order.pk, items)
             case _:
-                raise ValueError(
-                    f"Restaurant {restaurant.name} is not available for processing"
-                )
+                raise ValueError(f"Restaurant {restaurant.name} is not available for processing")

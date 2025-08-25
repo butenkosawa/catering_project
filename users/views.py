@@ -93,9 +93,7 @@ class UsersAPIViewSet(viewsets.GenericViewSet):
         except ValueError:
             activation_service.resend_activation_link(user)
             return Response(
-                {
-                    "detail": f"Key `{key}` does not exist. A new activation key has been sent to `{email}`"
-                },
+                {"detail": f"Key `{key}` does not exist. A new activation key has been sent to `{email}`"},
                 status=404,
             )
         else:

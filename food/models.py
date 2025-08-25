@@ -21,9 +21,7 @@ class Dish(models.Model):
 
     name = models.CharField(max_length=255, null=False)
     price = models.IntegerField(null=False)
-    restaurant = models.ForeignKey(
-        "Restaurant", on_delete=models.CASCADE, related_name="dishes"
-    )
+    restaurant = models.ForeignKey("Restaurant", on_delete=models.CASCADE, related_name="dishes")
 
     def __str__(self) -> str:
         return self.name
@@ -33,9 +31,7 @@ class Order(models.Model):
     class Meta:
         db_table = "orders"
 
-    status = models.CharField(
-        max_length=50, choices=OrderStatus.choices(), default=OrderStatus.NOT_STARTED
-    )
+    status = models.CharField(max_length=50, choices=OrderStatus.choices(), default=OrderStatus.NOT_STARTED)
     delivery_provider = models.CharField(max_length=20, null=True, blank=True)
     eta = models.DateField()
     total = models.PositiveIntegerField(null=True, blank=True)

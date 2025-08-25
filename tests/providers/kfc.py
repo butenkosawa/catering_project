@@ -9,9 +9,7 @@ from pydantic import BaseModel
 
 OrderStatus = Literal["not started", "cooking", "cooked", "finished"]
 STORAGE: dict[str, str] = {}
-CATERING_API_WEBHOOK_URL = (
-    "http://api:8000/webhooks/kfc/3d4d05d9-835e-433d-bb3b-e218bcbfa431/"
-)
+CATERING_API_WEBHOOK_URL = "http://api:8000/webhooks/kfc/3d4d05d9-835e-433d-bb3b-e218bcbfa431/"
 
 app = FastAPI(title="KFC API")
 

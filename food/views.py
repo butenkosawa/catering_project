@@ -180,9 +180,7 @@ class FoodFilters(BaseFilters):
     # def __init__(self, status: str | None = None, **kwargs):
     #     super().__init__(status=status, **kwargs)
 
-    def extract_delivery_provider(
-        self, provider: str | None = None
-    ) -> DeliveryProvider | None:
+    def extract_delivery_provider(self, provider: str | None = None) -> DeliveryProvider | None:
         if provider is None:
             return None
         provider_name = provider.upper()
@@ -394,9 +392,7 @@ def import_dishes(request):
     if request.method != "POST":
         raise ValueError(f"Method `{request.method}` is not allowed on this resource")
     elif request.user.role != Role.ADMIN:
-        raise ValueError(
-            f"User role `{request.user.role}` is not allowed on this resource"
-        )
+        raise ValueError(f"User role `{request.user.role}` is not allowed on this resource")
 
     csv_file = request.FILES.get("file")
     if csv_file is None:
