@@ -38,3 +38,9 @@ worker_low:
 
 worker_high:
     watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO -Q high_priority --pool=solo
+
+fix:
+	python -m black .; python -m isort .
+
+check:
+	python -m flake8 .; python -m black --check; python -m isort --check; python -m mypy --exclude archive --exclude docs --check-untyped-defs .

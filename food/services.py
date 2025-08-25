@@ -1,14 +1,14 @@
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from time import sleep
 
 from config import celery_app
 from config.settings import CACHE_TTL
 from shared.cache import CacheService
 
-from .models import Order, Restaurant, OrderItem
 from .enums import OrderStatus
-from .providers import silpo, kfc, uklon, uber
 from .mapper import RESTAURANT_EXTERNAL_TO_INTERNAL
+from .models import Order, Restaurant
+from .providers import kfc, silpo, uber, uklon
 
 
 @dataclass
@@ -184,6 +184,9 @@ def order_delivery(order_id: int):
         addresses.append(address)
         comments.append(f"Delivery to the {rest_name}")
 
+    if not order.delivery_provider:
+        raise ValueError("Delivery provider is not set for this order")
+
     try:
         match order.delivery_provider.lower():
             case "uklon":
@@ -264,7 +267,7 @@ def order_in_silpo(order_id: int, items):
             # IF ALREADY HAVE EXTERNAL ID - JUST RETRIEVE THE ORDER
             # PASS EXTERNAL SILPO ORDER ID
             response = client.get_order(silpo_order["external_id"])
-            internal_status: OrderStatus = get_internal_status(
+            internal_status = get_internal_status(
                 provider_key="silpo", status=response.status
             )
             print(
@@ -360,11 +363,11 @@ def schedule_order(order: Order):
     for restaurant, items in items_by_restaurants.items():
         match restaurant.name.lower():
             case "silpo":
-                order_in_silpo.delay(order.pk, items)  # type: ignore[attr-defined]
+                order_in_silpo.delay(order.pk, items)
                 # or
                 # order_in_silpo.apply_async()
             case "kfc":
-                order_in_kfc.delay(order.pk, items)  # type: ignore[attr-defined]
+                order_in_kfc.delay(order.pk, items)
             case _:
                 raise ValueError(
                     f"Restaurant {restaurant.name} is not available for processing"

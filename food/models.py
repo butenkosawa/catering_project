@@ -1,7 +1,7 @@
+from django.conf import settings
 from django.db import models
 
 from .enums import OrderStatus
-from django.conf import settings
 
 
 class Restaurant(models.Model):
@@ -58,10 +58,10 @@ class Order(models.Model):
 
         return results
 
-    def delivery_meta(self) -> tuple[str, str]:
+    def delivery_meta(self) -> list[tuple[str, str]]:
         """Return addresses without duplicates."""
 
-        return (
+        return list(
             self.items.select_related("dish__restaurant")
             .values_list(
                 "dish__restaurant__name",

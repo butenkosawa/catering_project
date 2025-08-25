@@ -1,8 +1,9 @@
 from enum import StrEnum, auto
-from django.db import models
-from django.contrib.auth.hashers import make_password
+
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import PermissionsMixin
+from django.db import models
 
 
 class Role(StrEnum):
@@ -71,9 +72,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
-    role = models.CharField(
-        max_length=50, default=Role.CUSTOMER, choices=Role.choices()
-    )
+    role = models.CharField(max_length=50, default=Role.CUSTOMER, choices=Role.choices())
 
     EMAIL_FIELD = "email"
     USERNAME_FIELD = "email"

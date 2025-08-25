@@ -16,4 +16,4 @@ jobs:
       - name: install dependencies
         run: pip install pipenv && pipenv sync --dev --system
       - name: code quality check
-        run: flake8 .
+        run: just check

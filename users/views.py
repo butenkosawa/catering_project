@@ -1,11 +1,11 @@
 from typing import Any
+
 from django.contrib.auth.hashers import make_password
-from rest_framework import viewsets, routers, permissions, serializers
+from rest_framework import permissions, routers, serializers, viewsets
+from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 
 from .models import User
 from .services import ActivationService, send_email
@@ -15,7 +15,7 @@ class UserSerialiser(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     role = serializers.CharField(read_only=True)
 
-    class Meta:  # type: ignore
+    class Meta:
         model = User
         fields = [
             "id",
@@ -67,7 +67,7 @@ class UsersAPIViewSet(viewsets.GenericViewSet):
             user_id=getattr(serializer.instance, "id"),
             activation_key=str(activation_key),
         )
-        send_email.delay(email=email, activation_key=str(activation_key))  # type: ignore[attr-defined]
+        send_email.delay(email=email, activation_key=str(activation_key))
 
         return Response(UserSerialiser(serializer.instance).data, status=201)
 

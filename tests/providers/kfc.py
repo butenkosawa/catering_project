@@ -1,14 +1,14 @@
 import asyncio
-import httpx
 import random
 import time
-
-from fastapi import FastAPI, BackgroundTasks
-from pydantic import BaseModel
 from typing import Literal
 
+import httpx
+from fastapi import BackgroundTasks, FastAPI
+from pydantic import BaseModel
+
 OrderStatus = Literal["not started", "cooking", "cooked", "finished"]
-STORAGE: dict[str, OrderStatus] = {}
+STORAGE: dict[str, str] = {}
 CATERING_API_WEBHOOK_URL = (
     "http://api:8000/webhooks/kfc/3d4d05d9-835e-433d-bb3b-e218bcbfa431/"
 )
@@ -49,7 +49,7 @@ async def update_order_status(order_id):
 async def make_order(body: OrderRequestBody, background_tasks: BackgroundTasks):
     print(body)
 
-    order_id = f"{int(time.time())}{random.randint(1000,9999)}"
+    order_id = f"{int(time.time())}{random.randint(1000, 9999)}"
     STORAGE[order_id] = "not started"
     background_tasks.add_task(update_order_status, order_id)
 

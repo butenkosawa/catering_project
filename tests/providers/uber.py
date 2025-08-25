@@ -1,18 +1,15 @@
 import asyncio
-import httpx
 import random
 import uuid
 
+import httpx
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
-
 
 ORDER_STATUSES = ("not started", "delivery", "delivered")
 STORAGE: dict[str, dict] = {}
 
-CATERING_API_WEBHOOK_URL = (
-    "http://api:8000/webhooks/uber/e7a684e0-03e3-46ba-97eb-f3604abc494c/"
-)
+CATERING_API_WEBHOOK_URL = "http://api:8000/webhooks/uber/e7a684e0-03e3-46ba-97eb-f3604abc494c/"
 
 app = FastAPI(title="Uber API")
 

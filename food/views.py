@@ -35,12 +35,12 @@ CREATE ORDER FLOW
 }
 """
 
-import io
 import csv
+import io
 import json
 from dataclasses import asdict
-from typing import Any
 from datetime import date
+from typing import Any
 
 from django.db import transaction
 from django.db.models import Prefetch
@@ -49,28 +49,24 @@ from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import viewsets, serializers, routers, permissions
-from rest_framework.request import Request
-from rest_framework.response import Response
+from rest_framework import permissions, routers, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from config.settings import CACHE_TTL
 from shared.cache import CacheService
 from users.models import Role, User
+
 from .enums import DeliveryProvider
-from .models import Restaurant, Dish, Order, OrderItem, OrderStatus
-from .services import (
-    TrackingOrder,
-    all_orders_cooked,
-    get_tracking_order,
-    schedule_order,
-)
+from .models import Dish, Order, OrderItem, OrderStatus, Restaurant
+from .services import all_orders_cooked, get_tracking_order, schedule_order
 
 
 class DishCreatorSerializer(serializers.ModelSerializer):
-    class Meta:  # type: ignore
+    class Meta:
         model = Dish
         fields = "__all__"
 
@@ -81,7 +77,7 @@ class DishCreatorSerializer(serializers.ModelSerializer):
 
 
 class DishSerializer(serializers.ModelSerializer):
-    class Meta:  # type: ignore
+    class Meta:
         model = Dish
         exclude = ["restaurant"]
 
@@ -89,7 +85,7 @@ class DishSerializer(serializers.ModelSerializer):
 class RestaurantSerializer(serializers.ModelSerializer):
     dishes = DishSerializer(many=True)
 
-    class Meta:  # type: ignore
+    class Meta:
         model = Restaurant
         fields = "__all__"
 
@@ -100,7 +96,7 @@ class OrderItemSerializer(serializers.Serializer):
 
 
 class OrderSerializer(serializers.Serializer):
-    id = serializers.PrimaryKeyRelatedField(read_only=True)
+    id = serializers.IntegerField(read_only=True)
     items = OrderItemSerializer(many=True)
     eta = serializers.DateField()
     total = serializers.IntegerField(min_value=1, read_only=True)
@@ -128,13 +124,9 @@ class OrderSerializer(serializers.Serializer):
         return value
 
 
-class KFCOrderSerializer(serializers.Serializer):
-    pass
-
-
 class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        assert type(request.user) == User
+        assert type(request.user) is User
         user: User = request.user
         if user.role == Role.ADMIN:
             return True
@@ -167,7 +159,7 @@ class BaseFilters:
 
             try:
                 extractor = getattr(self, f"extract_{_key}")
-            except AttributeError as error:
+            except AttributeError:
                 errors["queryParams"][
                     key
                 ] = f"You forgot to define `extract_{_key}` method in your class `{self.__class__.__name__}`"
@@ -352,6 +344,9 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
     def create_order(self, request: Request) -> Response:
         serializer = OrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        if not isinstance(request.user, User):
+            raise ValidationError("Only authenticated users can create orders.")
 
         with transaction.atomic():
             order = Order.objects.create(

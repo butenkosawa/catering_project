@@ -302,3 +302,19 @@ Alternatives
     - Data validation & data transformation
     - User for all input/output structures
   - Permissions and Authorization layer
+
+# Deployment
+
+- CI/CD
+  - Code Quality
+    - Linter check
+    - Formatting check (code and imports)
+    - Types checking
+    - Running tests
+  - Deployment Automation
+- Domain Names
+  - GoDaddy
+  - ...
+- SSL Certificates
+  - LetsEncrypt
+  - namecheap

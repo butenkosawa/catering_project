@@ -5,12 +5,12 @@ Structure:
     delete(key: str)
 """
 
-# from dataclasses import asdict, dataclass
-import redis
 import json
 
-from config.settings import CACHE_URL
+# from dataclasses import asdict, dataclass
+import redis
 
+from config.settings import CACHE_URL
 
 # @dataclass
 # class Structure:
@@ -35,9 +35,7 @@ class CacheService:
         # if not isinstance(value, Structure):
         #     payload = asdict(value)
 
-        self.connection.set(
-            name=self._build_key(namespace, key), value=json.dumps(value), ex=ttl
-        )
+        self.connection.set(name=self._build_key(namespace, key), value=json.dumps(value), ex=ttl)
 
     def get(self, namespace: str, key: str):
         result: str = self.connection.get(self._build_key(namespace, key))  # type: ignore

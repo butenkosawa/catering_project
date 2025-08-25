@@ -2,9 +2,8 @@ import asyncio
 import random
 import time
 
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import BackgroundTasks, FastAPI
 from pydantic import BaseModel, Field
-
 
 ORDER_STATUSES = ("not started", "delivery", "delivered")
 
@@ -46,7 +45,7 @@ async def update_order_status(order_id):
 @app.post("/drivers/orders")
 async def make_order(body: OrderRequestBody, background_tasks: BackgroundTasks):
     print(body)
-    order_id = f"{int(time.time())}{random.randint(1000,9999)}"
+    order_id = f"{int(time.time())}{random.randint(1000, 9999)}"
     STORAGE[order_id] = {
         "id": order_id,
         "status": "not started",

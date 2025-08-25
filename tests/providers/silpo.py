@@ -1,14 +1,14 @@
 import asyncio
 import random
 import uuid
-
-from fastapi import FastAPI, BackgroundTasks
-from pydantic import BaseModel
 from typing import Literal
+
+from fastapi import BackgroundTasks, FastAPI
+from pydantic import BaseModel
 
 OrderStatus = Literal["not started", "cooking", "cooked", "finished"]
 
-STORAGE: dict[str, OrderStatus] = {}
+STORAGE: dict[str, str] = {}
 """
 {
     "880cc42b-0577-42c5-8247-1e29f673df54": "not_started"
