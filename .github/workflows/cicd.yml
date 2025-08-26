@@ -19,3 +19,24 @@ jobs:
         env:
           DJANGO_SECRET_KEY: your-secret-key
         run: make check
+
+  deployment:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    steps:
+      - uses: actions/checkout@v4
+      - name: Executing remote SSH commands using SSH PRIVATE KEY
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{secrets.SERVER_HOST}}
+          port: ${{secrets.SERVER_PORT}}
+          username: ${{secrets.SERVER_USERNAME}}
+          key: ${{secrets.SERVER_SSH_PRIVATE_KEY}}
+          script: |
+            cd ~/catering_project
+            git pull origin main
+            sudo docker compose build
+            sudo docker compose down
+            sudo docker compose up -d
+            sudo docker compose exec api python manage.py migrate
+            echo "🚀 Deployment is Done"
