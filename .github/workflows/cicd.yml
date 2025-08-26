@@ -22,7 +22,7 @@ jobs:
 
   deployment:
     runs-on: ubuntu-latest
-    needs: code-quality
+    needs: code-quality-check
     steps:
       - uses: actions/checkout@v4
       - name: Executing remote SSH commands using SSH PRIVATE KEY
