@@ -12,6 +12,7 @@ psycopg2-binary = "~=2.9.10"
 python-dotenv = "~=1.1.1"
 celery = { version="==5.4.0", extras=["redis"] }  # Worker
 gunicorn = "==23.0.0"
+httpx = "~=0.28.1"
 
 [dev-packages]
 flake8="~=7.3.0"    # code quality
@@ -24,9 +25,9 @@ djangorestframework-stubs = { version="~=3.16.0", extras=["compatible-mypy"] }
 fastapi="~=0.116.1" # web framework
 uvicorn = "~=0.35.0" # asgi for fastapi
 pydantic = "~=2.11.7"
-httpx = "~=0.28.1"
 celery-types = "~=0.23.0"
 watchdog = "~=6.0.0"
+drf-spectacular = "~=0.28.0"
 
 [requires]
 python_version = "3.13"

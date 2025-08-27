@@ -37,6 +37,7 @@ RUN ls -l /app
 FROM base AS dev
 
 ENV C_FORCE_ROOT="true"
+ENV DJANGO_DEBUG=1
 
 RUN pipenv sync --dev --system
 
@@ -46,6 +47,9 @@ CMD [ "manage.py", "runserver", "0.0.0.0:8000" ]
 
 
 FROM base AS prod
+
+ENV DJANGO_DEBUG=
+ENV GUNICORN_CMD_ARGS="--bind 0.0.0.0:8000 --reload"
 
 RUN pipenv install --deploy --system
 
