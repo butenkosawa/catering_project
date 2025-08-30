@@ -250,7 +250,7 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         else:
             return [permissions.IsAuthenticated()]
 
-    @action(methods=["get", "post"], detail=False)
+    @action(methods=["get", "post"], detail=False, url_name="dishes-list")
     def dishes(self, request: Request) -> Response:
         if request.method == "GET":
             # Apply caching only for GET requests

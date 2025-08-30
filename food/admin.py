@@ -8,7 +8,7 @@ admin.site.register(OrderItem)
 
 @admin.register(Dish)
 class DishAdmin(admin.ModelAdmin):
-    list_display = ("name", "price", "restaurant", "id")
+    list_display = ("id", "name", "price", "restaurant", "id")
     search_fields = ("name",)
     list_filter = ("name", "restaurant")
     # actions = ("import_csv",)

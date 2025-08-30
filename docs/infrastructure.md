@@ -1,0 +1,62 @@
+- Project Infrastructure
+  - Platforms
+  - Technologies
+- Platforms
+  - Cloud (provides all technologies)
+    - AWS
+    - GCP
+    - Azure
+    - Digital Ocean
+    - Heroku
+    - Heroku
+  - Self-hosted
+    - Personal Computer
+    - Computers Network, etc...
+- Runtime
+  - Bare-metal
+    - High Performance
+    - Low Abstraction
+    - Rare in modern practice
+  - Virtual Machine
+    - emulate full machine
+    - slow to start, heavier
+    - popular in enterprise
+    - Tools
+      - Virtual Box
+      - VMWare
+      - KVM
+      - Hyper-V
+      - Parallels
+  - Container
+    - fast, lightweight
+    - packages, code, dependencies
+    - isolated process on the same OS Kernel
+    - Tools
+        - Docker
+        - Podman (rootless)
+        - Orbstack (buildx)
+- Tools for Infrastructure Automation
+    - Orchestration
+        - Docker Compose
+        - K3s, K8S
+    - Provisioning
+        - Terraform
+        - Pulumi
+    - Configuration Management
+        - Ansible
+        - Chef, ...
+    - Secrets
+        - Docker Secrets
+        - K8S Secrets
+        - Vault, ...
+    - CI / CD
+
+
+
+Deploy Use Case
+- Git push -> GitHub Actions (has SSH) -> SSH Execute -> Git pull -> Build Container -> Run Container
+
+Infrastructure
+- Database
+- Mailing
+- HTTP Server

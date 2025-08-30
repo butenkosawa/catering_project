@@ -318,3 +318,58 @@ Alternatives
 - SSL Certificates
   - LetsEncrypt
   - namecheap
+
+# Tests
+
+1. backward compatibility
+2. test logical components
+3. QA
+   - how it works from the frontend perspective
+4. CI/CD
+   - linter, formatter tests?
+5. types?
+   - unit
+   - integration
+   - system
+6. TDD (test driven development)
+7. application for testing?
+
+## Types of Tests
+
+1. Smoke Tests (happy flow)
+
+- Input Data ---> Application
+- Simply validate API is not broken
+
+2. Functional Tests
+
+- Specification (include expected results) -> Input Data -> Application -> Compare with expected result
+- Test functional requirements
+
+3. Integration Tests
+
+- Plan .... Compare with expected results
+
+4. Regression Tests
+
+- specification -> old app
+- specification -> new app
+- compare results
+
+5. Load Tests
+
+- ab, locust, jMeter, ...
+- capacity
+
+6. Stress Tests
+
+- ...
+
+7. Security Tests
+
+- specification -> application (nothing breaks)
+
+8. UI Tests
+9. Fuzz Tests
+
+- Unexpected Data -> Application
