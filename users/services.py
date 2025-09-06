@@ -78,7 +78,7 @@ class ActivationService:
             raise ValueError("No email specified for user activation process")
 
         activation_key = self.create_activation_key()
-        self.save_activation_information(user_id=user.id, activation_key=str(activation_key))
+        self.save_activation_information(user_id=user.pk, activation_key=str(activation_key))
         send_email.delay(email=self.email, activation_key=str(activation_key))
 
     def remove_activation_key(self, activation_key: str) -> None:

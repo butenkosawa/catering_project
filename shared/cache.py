@@ -7,11 +7,9 @@ Structure:
 
 import json
 
+from django.core.cache import cache
+
 # from dataclasses import asdict, dataclass
-import redis
-
-from config.settings import CACHE_URL
-
 # @dataclass
 # class Structure:
 #     id: int
@@ -24,25 +22,20 @@ class CacheService:
     get(namespace='user_activation', key=12) -> Activation(...)
     """
 
-    def __init__(self) -> None:
-        self.connection: redis.Redis = redis.Redis.from_url(CACHE_URL)
-
     @staticmethod
     def _build_key(namespace: str, key: str) -> str:
-        return f"{namespace}: {key}"
+        return f"{namespace}:{key}"
 
     def set(self, namespace: str, key: str, value: dict, ttl: int | None = None):
-        # if not isinstance(value, Structure):
-        #     payload = asdict(value)
-
-        self.connection.set(name=self._build_key(namespace, key), value=json.dumps(value), ex=ttl)
+        payload = json.dumps(value if isinstance(value, dict) else value.__dict__)
+        cache.set(self._build_key(namespace, key), payload, timeout=ttl)
 
     def get(self, namespace: str, key: str):
-        result: str = self.connection.get(self._build_key(namespace, key))  # type: ignore
-        try:
-            return json.loads(result)
-        except TypeError:
+        result: str | None = cache.get(self._build_key(namespace, key))
+        if result is None:
             return None
+        else:
+            return json.loads(result)
 
     def delete(self, namespace: str, key: str):
-        self.connection.delete(self._build_key(namespace, key))
+        cache.delete(self._build_key(namespace, key))

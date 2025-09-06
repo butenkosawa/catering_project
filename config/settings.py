@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -176,8 +177,6 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-CACHE_URL = os.getenv("DJANGO_CACHE_URL", "redis://cache:6379/0")
-
 CACHE_TTL = {
     "ACTIVATION": 60 * 60 * 72,
     "ORDER_DATA": 60 * 60 * 48,
@@ -187,11 +186,21 @@ CACHE_TTL = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": CACHE_URL,
+        "LOCATION": os.getenv("DJANGO_CACHE_URL", "redis://cache:6379/0"),
     }
 }
 
-ACTIVATION_KEY_TLL = 800
+# LocMemCache
+# (1) thread safe
+# (2) per process
+# (3) LOCATION only of multiply caches are specified
+
+if DEBUG is True and ("test" in sys.argv):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        }
+    }
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", default="mailing")

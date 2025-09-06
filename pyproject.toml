@@ -1,3 +1,11 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+addopts = "-s -v --cache-clear --reuse-db"
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+cache_dir = "C:/Windows/Temp"
+
+
 [tool.black]
 target-version = ['py312']
 line-length = 120

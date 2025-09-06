@@ -13,6 +13,9 @@ iclean:
 vclean:
 	docker volume prune
 
+test:
+	python manage.py test --noinput
+
 run:
 	python manage.py runserver
 

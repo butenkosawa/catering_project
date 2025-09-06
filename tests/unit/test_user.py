@@ -1,11 +1,13 @@
+import pytest
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 User = get_user_model()
 
 
 class UserTestCase(TestCase):
-    def test_jhon_creation(self):
+    def test_john_creation(self):
         # setup input data
         payload = {
             "email": "john@email.com",
@@ -28,3 +30,16 @@ class UserTestCase(TestCase):
                 continue
 
             assert getattr(john, attr) == value
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"email": "john@email.com", "password": "Pa$$w0rd", "phone_number": "+380991111111"},  # same email
+        {"email": "marry@email.com", "password": "Pa$$w0rd", "phone_number": "+380990000000"},  # same phone number
+    ],
+)
+def test_user_duplicate(john, django_user_model, payload):
+    with pytest.raises(IntegrityError):
+        with transaction.atomic():
+            django_user_model.objects.create_user(**payload)

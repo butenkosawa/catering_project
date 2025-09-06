@@ -15,6 +15,12 @@ iclean:
 vclean:
 	docker volume prune
 
+test:
+	python -m pytest tests/
+
+test_int:
+	python -m pytest tests/integration
+
 run:
 	python manage.py runserver
 
