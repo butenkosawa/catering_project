@@ -62,7 +62,7 @@ from users.models import Role, User
 
 from .enums import DeliveryProvider
 from .models import Dish, Order, OrderItem, OrderStatus, Restaurant
-from .serializers import DishCreatorSerializer, DishSerializer, RestaurantSerializer, OrderSerializer
+from .serializers import DishCreatorSerializer, DishSerializer, OrderSerializer, RestaurantSerializer
 from .services import (
     all_orders_cooked,
     generate_recommendations,
