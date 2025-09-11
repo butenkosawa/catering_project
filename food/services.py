@@ -4,11 +4,14 @@ from time import sleep
 from config import celery_app
 from config.settings import CACHE_TTL
 from shared.cache import CacheService
+from shared.llm import LLMService
+from users.models import Role, User
 
 from .enums import OrderStatus
 from .mapper import RESTAURANT_EXTERNAL_TO_INTERNAL
-from .models import Order, Restaurant
+from .models import Dish, Order, Restaurant
 from .providers import kfc, silpo, uber, uklon
+from .serializers import DishSerializer, OrderSerializer
 
 
 @dataclass
@@ -341,3 +344,67 @@ def schedule_order(order: Order):
                 order_in_kfc.delay(order.pk, items)
             case _:
                 raise ValueError(f"Restaurant {restaurant.name} is not available for processing")
+
+
+def get_food_recommendations(user_id: int) -> dict:
+    cache = CacheService()
+    items = cache.get(namespace="recommendations", key=str(user_id))
+    serialiser = DishSerializer(items["dishes"] if items else [], many=True)
+
+    return {"recommendations": [serialiser.data]}
+
+
+@celery_app.task(queue="low_priority")
+def generate_recommendations():
+    """Generate recommendations for each user in the system and put them to the cache."""
+
+    # (1) setup (define initial instances)
+    LIMIT_ORDERS = 5
+    RECOMMENDATION_THRESHOLD = 2
+    users = User.objects.filter(role=Role.CUSTOMER)
+    llm = LLMService()
+    cache = CacheService()
+
+    # (2) for each user
+    for user in users:
+        # (3) get last orders
+        print(f"✨ Checking orders for {user.email}")
+        last_orders = user.orders.filter(status=OrderStatus.DELIVERED).order_by("-id")[:LIMIT_ORDERS]
+        order_serializer = OrderSerializer(last_orders, many=True)
+
+        print("=======================")
+        print(order_serializer.data)
+        print("=======================")
+
+        # (4) build promt to get top dishes
+        prompt = f"""
+        Below you can see the list of orders:
+        {order_serializer.data}
+
+        Return me up to {RECOMMENDATION_THRESHOLD} top dishes according to this list.
+        Return it without any verbosity except of coma separated ids.
+
+        The response will be used in Python to split data by coma and
+        convert to the integer all the ids.
+        """
+
+        # (5) LLM inference
+        response = llm.ask(prompt)
+        print(f"✨ LLM Result: {response}")
+
+        # (6.1) validate dishes have valid ids
+        try:
+            dishes_ids: list[int] = [int(dish_id) for dish_id in response.split(",")]
+        except ValueError as error:
+            raise ValueError(f"LLM return invalid IDs for dishes: {response}") from error
+
+        # (6.2) validate dishes ids exist (llm can hallucinate)
+        dishes = Dish.objects.filter(id__in=dishes_ids)
+        if dishes.count() != len(dishes_ids):
+            raise ValueError("Some of returned dishes are not in the database")
+
+        # (7) Build recommendations for the specific user in the cache
+        serializer = DishSerializer(dishes, many=True)
+        value = {"dishes": serializer.data}
+        cache.set(namespace="recommendations", key=str(user.pk), value=value)
+        print(f"✅ Data saved to the cache: {value}")

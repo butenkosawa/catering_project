@@ -35,7 +35,7 @@ class Order(models.Model):
     delivery_provider = models.CharField(max_length=20, null=True, blank=True)
     eta = models.DateField()
     total = models.PositiveIntegerField(null=True, blank=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="orders")
 
     def __str__(self) -> str:
         return f"[{self.pk}] {self.status} for {self.user.email}"

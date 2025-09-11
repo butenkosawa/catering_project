@@ -49,7 +49,7 @@ from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import permissions, routers, serializers, viewsets
+from rest_framework import permissions, routers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
@@ -62,66 +62,14 @@ from users.models import Role, User
 
 from .enums import DeliveryProvider
 from .models import Dish, Order, OrderItem, OrderStatus, Restaurant
-from .services import all_orders_cooked, get_tracking_order, schedule_order
-
-
-class DishCreatorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Dish
-        fields = "__all__"
-
-    def validate_price(self, value: int):
-        if value < 1:
-            raise ValidationError("PRICE must be greater than 1 (in cents)")
-        return value
-
-
-class DishSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Dish
-        exclude = ["restaurant"]
-
-
-class RestaurantSerializer(serializers.ModelSerializer):
-    dishes = DishSerializer(many=True)
-
-    class Meta:
-        model = Restaurant
-        fields = "__all__"
-
-
-class OrderItemSerializer(serializers.Serializer):
-    dish = serializers.PrimaryKeyRelatedField(queryset=Dish.objects.all())
-    quantity = serializers.IntegerField(min_value=1, max_value=20)
-
-
-class OrderSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    items = OrderItemSerializer(many=True)
-    eta = serializers.DateField()
-    total = serializers.IntegerField(min_value=1, read_only=True)
-    status = serializers.ChoiceField(OrderStatus.choices(), read_only=True)
-    delivery_provider = serializers.CharField()
-
-    @property
-    def calculated_total(self) -> int:
-        total = 0
-
-        for item in self.validated_data["items"]:
-            dish: Dish = item["dish"]
-            quantity: int = item["quantity"]
-            total += dish.price * quantity
-
-        return total
-
-    # validate_<any-fieldname>
-    # def validate_items(self, value: Any):
-    #     raise ValidationError("Some error")
-
-    def validate_eta(self, value: date):
-        if (value - date.today()).days < 1:
-            raise ValidationError("ETA must be min 1 day after today")
-        return value
+from .serializers import DishCreatorSerializer, DishSerializer, RestaurantSerializer, OrderSerializer
+from .services import (
+    all_orders_cooked,
+    generate_recommendations,
+    get_food_recommendations,
+    get_tracking_order,
+    schedule_order,
+)
 
 
 class IsAdmin(permissions.BasePermission):
@@ -246,6 +194,8 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         if self.action == "orders" and self.request.method == "GET":
             return [permissions.IsAuthenticated(), IsAdmin()]
         elif self.action == "dishes" and self.request.method == "POST":
+            return [permissions.IsAuthenticated(), IsAdmin()]
+        elif self.action == "recommendations_generate":
             return [permissions.IsAuthenticated(), IsAdmin()]
         else:
             return [permissions.IsAuthenticated()]
@@ -386,6 +336,22 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         order = Order.objects.get(id=id)
         serializer = OrderSerializer(order)
         return Response(data=serializer.data)
+
+    @action(methods=["post"], detail=False, url_path=r"recommendations/generate")
+    def recommendations_generate(self, request: Request) -> Response:
+        generate_recommendations()
+
+        return Response(data={"message": "Users recommendations started generating"})
+
+    @action(methods=["get"], detail=False, url_path=r"recommendations")
+    def recommendations(self, request: Request) -> Response:
+        user_id = request.user.pk
+        if user_id is None:
+            raise ValidationError("User must be authenticated")
+
+        recommendations = get_food_recommendations(user_id)
+
+        return Response(data=recommendations)
 
 
 def import_dishes(request):
