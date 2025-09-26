@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     # local apps
     "users",
     "food",
+    "chat",
 ]
 
 MIDDLEWARE = [
